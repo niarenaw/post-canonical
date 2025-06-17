@@ -1,0 +1,23 @@
+[project]
+name = "post-canonical"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=1.16.1",
+    "ruff>=0.11.13",
+]
+
+[tool.mypy]
+python_version = "3.12"
+use_strict = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+select = ["E", "F", "I", "N", "W", "B", "UP", "PL", "RUF"]
+ignore = []
