@@ -2,26 +2,6 @@
 
 A Python implementation of Post Canonical Systems, a formal system for string manipulation and computation.
 
-## Requirements
-
-- Python 3.12 or higher
-- uv (for package management)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/post-canonical.git
-cd post-canonical
-
-# Create and activate a virtual environment using uv
-uv venv
-source .venv/bin/activate  # On Unix/macOS
-
-# Install the package in development mode
-uv sync
-```
-
 ## Usage
 
 The package provides a simple way to create and work with Post Canonical Systems. Here's a basic example:
