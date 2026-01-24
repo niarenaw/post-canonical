@@ -1,7 +1,7 @@
 [project]
 name = "post-canonical"
-version = "0.1.0"
-description = "Add your description here"
+version = "2.0.0"
+description = "Post Canonical Systems - A Python implementation of Emil Post's formal string rewriting systems"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
