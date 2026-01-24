@@ -6,6 +6,6 @@ from .unifier import MultiPatternUnifier
 
 __all__ = [
     "Binding",
-    "PatternMatcher",
     "MultiPatternUnifier",
+    "PatternMatcher",
 ]

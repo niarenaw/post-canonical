@@ -98,10 +98,7 @@ class PCSJsonCodec:
                 for v in sorted(system.variables, key=lambda v: v.name)
             ],
             "axioms": list(sorted(system.axioms)),
-            "rules": [
-                self._rule_to_dict(r)
-                for r in sorted(system.rules, key=lambda r: (-r.priority, r.name or ""))
-            ],
+            "rules": [self._rule_to_dict(r) for r in sorted(system.rules, key=lambda r: (-r.priority, r.name or ""))],
         }
 
     def _rule_to_dict(self, rule: ProductionRule) -> dict[str, Any]:
@@ -130,9 +127,7 @@ class PCSJsonCodec:
         # Parse rules
         rules: list[ProductionRule] = []
         for r_data in data["rules"]:
-            antecedents = [
-                Pattern.parse(s, variables) for s in r_data["antecedents"]
-            ]
+            antecedents = [Pattern.parse(s, variables) for s in r_data["antecedents"]]
             consequent = Pattern.parse(r_data["consequent"], variables)
             rule = ProductionRule(
                 antecedents=antecedents,

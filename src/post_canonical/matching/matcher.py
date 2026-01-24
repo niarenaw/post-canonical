@@ -1,6 +1,6 @@
 """Core pattern matching algorithm with backtracking."""
 
-from typing import Iterator, Sequence
+from collections.abc import Iterator, Sequence
 
 from ..core.alphabet import Alphabet
 from ..core.pattern import Pattern, PatternElement

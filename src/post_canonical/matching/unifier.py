@@ -1,7 +1,7 @@
 """Multi-pattern unification for rules with multiple antecedents."""
 
+from collections.abc import Iterator, Sequence
 from itertools import permutations
-from typing import Iterator, Sequence
 
 from ..core.pattern import Pattern
 from .binding import Binding

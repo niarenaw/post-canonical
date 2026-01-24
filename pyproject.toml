@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "post-canonical"
 version = "2.0.0"
@@ -5,19 +9,42 @@ description = "Post Canonical Systems - A Python implementation of Emil Post's f
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+license = "MIT"
+authors = [{ name = "Post Canonical Contributors" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Typing :: Typed",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.urls]
+Repository = "https://github.com/niarenaw/post-canonical"
+Documentation = "https://github.com/niarenaw/post-canonical#readme"
 
 [dependency-groups]
 dev = [
     "mypy>=1.16.1",
+    "pytest>=9.0.2",
     "ruff>=0.11.13",
 ]
 
+[project.scripts]
+pcs = "post_canonical.cli:main"
+
 [tool.mypy]
 python_version = "3.12"
-use_strict = true
+strict = true
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B", "UP", "PL", "RUF"]
-ignore = []
+ignore = ["RUF022"]  # Allow unsorted __all__
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004"]  # Allow magic numbers in tests

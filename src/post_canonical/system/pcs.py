@@ -1,7 +1,7 @@
 """Main Post Canonical System class."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 from ..core.alphabet import Alphabet
 from ..core.rule import ProductionRule
@@ -45,9 +45,7 @@ class PostCanonicalSystem:
         """Ensure word uses only alphabet symbols."""
         invalid = self.alphabet.validate_word(word)
         if invalid:
-            raise ValueError(
-                f"Word '{word}' contains invalid characters: {invalid}"
-            )
+            raise ValueError(f"Word '{word}' contains invalid characters: {invalid}")
 
     def _validate_rule(self, rule: ProductionRule) -> None:
         """Validate rule patterns against alphabet and variables."""
@@ -89,9 +87,7 @@ class PostCanonicalSystem:
         executor = RuleExecutor(self.alphabet, self.rules, config)
 
         # Initialize with axioms
-        current: frozenset[DerivedWord] = frozenset(
-            DerivedWord.axiom(w) for w in self.axioms
-        )
+        current: frozenset[DerivedWord] = frozenset(DerivedWord.axiom(w) for w in self.axioms)
         all_words: dict[str, DerivedWord] = {dw.word: dw for dw in current}
 
         for _ in range(max_steps):

@@ -1,8 +1,9 @@
 """Variable bindings for pattern matching."""
 
-from dataclasses import dataclass
-from typing import Iterator, Mapping, Self
+from collections.abc import Iterator, Mapping
 from collections.abc import Mapping as MappingABC
+from dataclasses import dataclass
+from typing import Self
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +47,7 @@ class Binding(MappingABC[str, str]):
         """Convert to a regular dictionary."""
         return dict(self._data)
 
-    def merge(self, other: Self) -> Self | None:
+    def merge(self, other: "Binding") -> "Binding | None":
         """Merge two bindings. Returns None if there's a conflict.
 
         A conflict occurs when the same variable is bound to different values.
@@ -58,7 +59,7 @@ class Binding(MappingABC[str, str]):
             merged[k] = v
         return Binding(merged)
 
-    def extend(self, name: str, value: str) -> Self | None:
+    def extend(self, name: str, value: str) -> "Binding | None":
         """Add a binding. Returns None if there's a conflict."""
         return self.merge(Binding({name: value}))
 

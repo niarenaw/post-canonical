@@ -1,15 +1,15 @@
 """Rule execution engine for Post Canonical Systems."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Iterator
 
 from ..core.alphabet import Alphabet
 from ..core.rule import ProductionRule
 from ..matching.binding import Binding
 from ..matching.matcher import PatternMatcher
 from ..matching.unifier import MultiPatternUnifier
-from .derivation import DerivationStep, DerivedWord, Derivation
+from .derivation import Derivation, DerivationStep, DerivedWord
 
 
 class ExecutionMode(Enum):
@@ -75,7 +75,6 @@ class RuleExecutor:
                 results_count += 1
 
                 if self.config.mode == ExecutionMode.DETERMINISTIC:
-                    # In deterministic mode, only yield first result overall
                     return
 
                 if self.config.max_results and results_count >= self.config.max_results:
@@ -115,30 +114,36 @@ class RuleExecutor:
         else:
             yield from self._apply_multi_antecedent_all(rule, words)
 
+    def _create_derivation_step(
+        self,
+        inputs: tuple[str, ...],
+        rule: ProductionRule,
+        binding: Binding,
+    ) -> tuple[DerivationStep, str]:
+        """Create a derivation step and compute the result word.
+
+        Returns the step and the resulting word as a tuple, since both are
+        needed by callers and the result computation is tightly coupled.
+        """
+        result = rule.consequent.substitute(binding)
+        step = DerivationStep(
+            inputs=inputs,
+            rule=rule,
+            binding=binding,
+            output=result,
+        )
+        return step, result
+
     def _apply_single_antecedent(
         self,
         rule: ProductionRule,
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply rule with single antecedent (respects execution mode)."""
-        pattern = rule.antecedents[0]
-
-        for derived_word in words:
-            matches = self.matcher.match(pattern, derived_word.word)
-
-            for binding in matches:
-                result = rule.consequent.substitute(binding)
-                step = DerivationStep(
-                    inputs=(derived_word.word,),
-                    rule=rule,
-                    binding=binding,
-                    output=result,
-                )
-                new_derivation = derived_word.derivation.extend(step)
-                yield DerivedWord(result, new_derivation)
-
-                if self.config.mode == ExecutionMode.DETERMINISTIC:
-                    return  # Only first match
+        for derived in self._apply_single_antecedent_all(rule, words):
+            yield derived
+            if self.config.mode == ExecutionMode.DETERMINISTIC:
+                return
 
     def _apply_single_antecedent_all(
         self,
@@ -150,12 +155,10 @@ class RuleExecutor:
 
         for derived_word in words:
             for binding in self.matcher.match(pattern, derived_word.word):
-                result = rule.consequent.substitute(binding)
-                step = DerivationStep(
+                step, result = self._create_derivation_step(
                     inputs=(derived_word.word,),
                     rule=rule,
                     binding=binding,
-                    output=result,
                 )
                 new_derivation = derived_word.derivation.extend(step)
                 yield DerivedWord(result, new_derivation)
@@ -166,29 +169,8 @@ class RuleExecutor:
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply rule with multiple antecedents (respects execution mode)."""
-        word_list = list(words)
-        raw_words = [dw.word for dw in word_list]
-
-        for word_combo, binding in self.unifier.unify_any_combination(
-            rule.antecedents, raw_words
-        ):
-            result = rule.consequent.substitute(binding)
-
-            # Find the DerivedWord objects for each word in the combo
-            input_derived = tuple(
-                next(dw for dw in word_list if dw.word == w) for w in word_combo
-            )
-
-            combined = self._merge_derivations(input_derived)
-            step = DerivationStep(
-                inputs=word_combo,
-                rule=rule,
-                binding=binding,
-                output=result,
-            )
-            new_derivation = combined.extend(step)
-            yield DerivedWord(result, new_derivation)
-
+        for derived in self._apply_multi_antecedent_all(rule, words):
+            yield derived
             if self.config.mode == ExecutionMode.DETERMINISTIC:
                 return
 
@@ -198,25 +180,18 @@ class RuleExecutor:
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply rule with multiple antecedents (all matches)."""
-        word_list = list(words)
-        raw_words = [dw.word for dw in word_list]
+        word_map = {dw.word: dw for dw in words}
+        raw_words = list(word_map.keys())
 
-        for word_combo, binding in self.unifier.unify_any_combination(
-            rule.antecedents, raw_words
-        ):
-            result = rule.consequent.substitute(binding)
-
-            input_derived = tuple(
-                next(dw for dw in word_list if dw.word == w) for w in word_combo
-            )
-
-            combined = self._merge_derivations(input_derived)
-            step = DerivationStep(
+        for word_combo, binding in self.unifier.unify_any_combination(rule.antecedents, raw_words):
+            step, result = self._create_derivation_step(
                 inputs=word_combo,
                 rule=rule,
                 binding=binding,
-                output=result,
             )
+
+            input_derived = tuple(word_map[w] for w in word_combo)
+            combined = self._merge_derivations(input_derived)
             new_derivation = combined.extend(step)
             yield DerivedWord(result, new_derivation)
 

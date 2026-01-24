@@ -1,9 +1,9 @@
 """Query capabilities for Post Canonical Systems."""
 
-from .reachability import QueryResult, ReachabilityResult, ReachabilityQuery
+from .reachability import QueryResult, ReachabilityQuery, ReachabilityResult
 
 __all__ = [
     "QueryResult",
-    "ReachabilityResult",
     "ReachabilityQuery",
+    "ReachabilityResult",
 ]
