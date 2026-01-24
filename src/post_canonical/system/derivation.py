@@ -1,7 +1,8 @@
 """Derivation tracking for Post Canonical Systems."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence, Self
+from typing import Self
 
 from ..core.rule import ProductionRule
 from ..matching.binding import Binding
@@ -57,9 +58,9 @@ class Derivation:
         """True if this derivation has no steps (word is an axiom)."""
         return len(self.steps) == 0
 
-    def extend(self, step: DerivationStep) -> Self:
+    def extend(self, step: DerivationStep) -> "Derivation":
         """Return new Derivation with added step."""
-        return Derivation(self.steps + (step,))
+        return Derivation((*self.steps, step))
 
     def rules_used(self) -> list[str]:
         """Return list of rule names used in this derivation."""

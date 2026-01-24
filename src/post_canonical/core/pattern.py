@@ -1,7 +1,8 @@
 """Pattern representation for Post Canonical Systems."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .variable import Variable
 
@@ -55,7 +56,12 @@ class Pattern:
 
     @property
     def variables(self) -> frozenset[Variable]:
-        """Return all unique variables in the pattern."""
+        """Return all unique variables in the pattern.
+
+        Not cached because this property is only accessed during system construction
+        and validation, not in hot execution paths. Patterns are typically small, so
+        the cost of filtering elements is negligible compared to caching overhead.
+        """
         return frozenset(e for e in self.elements if isinstance(e, Variable))
 
     @property

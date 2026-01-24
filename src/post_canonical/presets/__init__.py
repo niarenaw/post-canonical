@@ -3,25 +3,25 @@
 from .alphabets import (
     BINARY,
     DECIMAL,
-    HEXADECIMAL,
+    ENGLISH_LETTERS,
     ENGLISH_LOWERCASE,
     ENGLISH_UPPERCASE,
-    ENGLISH_LETTERS,
+    HEXADECIMAL,
     MIU,
 )
-from .examples import create_mu_puzzle, create_binary_doubler, create_palindrome_generator
+from .examples import create_binary_doubler, create_mu_puzzle, create_palindrome_generator
 
 __all__ = [
     # Alphabets
     "BINARY",
     "DECIMAL",
-    "HEXADECIMAL",
+    "ENGLISH_LETTERS",
     "ENGLISH_LOWERCASE",
     "ENGLISH_UPPERCASE",
-    "ENGLISH_LETTERS",
+    "HEXADECIMAL",
     "MIU",
+    "create_binary_doubler",
     # Example systems
     "create_mu_puzzle",
-    "create_binary_doubler",
     "create_palindrome_generator",
 ]

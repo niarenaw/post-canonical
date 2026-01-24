@@ -1,15 +1,15 @@
 """Post Canonical System implementation with derivation tracking."""
 
 from .derivation import Derivation, DerivationStep, DerivedWord
-from .executor import ExecutionMode, ExecutionConfig, RuleExecutor
+from .executor import ExecutionConfig, ExecutionMode, RuleExecutor
 from .pcs import PostCanonicalSystem
 
 __all__ = [
     "Derivation",
     "DerivationStep",
     "DerivedWord",
-    "ExecutionMode",
     "ExecutionConfig",
-    "RuleExecutor",
+    "ExecutionMode",
     "PostCanonicalSystem",
+    "RuleExecutor",
 ]

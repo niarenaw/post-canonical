@@ -37,69 +37,69 @@ Example usage:
 
 # Core types
 from .core.alphabet import Alphabet
-from .core.variable import Variable, VariableKind
 from .core.pattern import Pattern
 from .core.rule import ProductionRule
-
-# System
-from .system.pcs import PostCanonicalSystem
-from .system.derivation import Derivation, DerivationStep, DerivedWord
-from .system.executor import ExecutionMode, ExecutionConfig
-
-# Query
-from .query.reachability import QueryResult, ReachabilityResult, ReachabilityQuery
-
-# Serialization
-from .serialization.json_codec import PCSJsonCodec
+from .core.variable import Variable, VariableKind
 
 # Presets
 from .presets.alphabets import (
     BINARY,
     DECIMAL,
-    HEXADECIMAL,
+    ENGLISH_LETTERS,
     ENGLISH_LOWERCASE,
     ENGLISH_UPPERCASE,
-    ENGLISH_LETTERS,
+    HEXADECIMAL,
     MIU,
 )
 from .presets.examples import (
-    create_mu_puzzle,
     create_binary_doubler,
+    create_mu_puzzle,
     create_palindrome_generator,
 )
+
+# Query
+from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
+
+# Serialization
+from .serialization.json_codec import PCSJsonCodec
+from .system.derivation import Derivation, DerivationStep, DerivedWord
+from .system.executor import ExecutionConfig, ExecutionMode
+
+# System
+from .system.pcs import PostCanonicalSystem
 
 __version__ = "2.0.0"
 
 __all__ = [
-    # Core
-    "Alphabet",
-    "Variable",
-    "VariableKind",
-    "Pattern",
-    "ProductionRule",
-    # System
-    "PostCanonicalSystem",
-    "Derivation",
-    "DerivationStep",
-    "DerivedWord",
-    "ExecutionMode",
-    "ExecutionConfig",
-    # Query
-    "QueryResult",
-    "ReachabilityResult",
-    "ReachabilityQuery",
-    # Serialization
-    "PCSJsonCodec",
     # Preset alphabets
     "BINARY",
     "DECIMAL",
-    "HEXADECIMAL",
+    "ENGLISH_LETTERS",
     "ENGLISH_LOWERCASE",
     "ENGLISH_UPPERCASE",
-    "ENGLISH_LETTERS",
+    "HEXADECIMAL",
     "MIU",
+    # Core
+    "Alphabet",
+    "Derivation",
+    "DerivationStep",
+    "DerivedWord",
+    "ExecutionConfig",
+    "ExecutionMode",
+    # Serialization
+    "PCSJsonCodec",
+    "Pattern",
+    # System
+    "PostCanonicalSystem",
+    "ProductionRule",
+    # Query
+    "QueryResult",
+    "ReachabilityQuery",
+    "ReachabilityResult",
+    "Variable",
+    "VariableKind",
+    "create_binary_doubler",
     # Preset examples
     "create_mu_puzzle",
-    "create_binary_doubler",
     "create_palindrome_generator",
 ]

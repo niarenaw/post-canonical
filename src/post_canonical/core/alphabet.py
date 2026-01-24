@@ -1,7 +1,7 @@
 """Alphabet definition for Post Canonical Systems."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator, Self
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +46,7 @@ class Alphabet:
     def __repr__(self) -> str:
         return f"Alphabet({self})"
 
-    def union(self, other: Self) -> Self:
+    def union(self, other: "Alphabet") -> "Alphabet":
         """Return a new alphabet containing symbols from both."""
         return Alphabet(self.symbols | other.symbols)
 

@@ -1,11 +1,10 @@
 """Example Post Canonical Systems."""
 
-from ..core.alphabet import Alphabet
 from ..core.pattern import Pattern
 from ..core.rule import ProductionRule
 from ..core.variable import Variable
 from ..system.pcs import PostCanonicalSystem
-from .alphabets import MIU, BINARY
+from .alphabets import BINARY, MIU
 
 
 def create_mu_puzzle() -> PostCanonicalSystem:
