@@ -48,3 +48,4 @@ ignore = ["RUF022"]  # Allow unsorted __all__
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004"]  # Allow magic numbers in tests
+"example.py" = ["PLR2004"]  # Allow magic numbers in examples

@@ -2,7 +2,6 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Self
 
 
 @dataclass(frozen=True, slots=True)

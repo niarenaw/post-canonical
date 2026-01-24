@@ -9,14 +9,14 @@ Demonstrates the key features:
 """
 
 from post_canonical import (
-    PostCanonicalSystem,
     Alphabet,
-    Variable,
-    Pattern,
-    ProductionRule,
     ExecutionMode,
-    ReachabilityQuery,
+    Pattern,
     PCSJsonCodec,
+    PostCanonicalSystem,
+    ProductionRule,
+    ReachabilityQuery,
+    Variable,
     create_mu_puzzle,
     create_palindrome_generator,
 )
@@ -72,13 +72,15 @@ def demo_custom_system() -> None:
 
     # Rule: x + | y = z  ->  x | + y = z
     # (Move a tally from right side of + to left side)
-    rules = frozenset({
-        ProductionRule(
-            antecedents=[Pattern([x, "+|", y])],
-            consequent=Pattern([x, "|+", y]),
-            name="move_tally",
-        ),
-    })
+    rules = frozenset(
+        {
+            ProductionRule(
+                antecedents=[Pattern([x, "+|", y])],
+                consequent=Pattern([x, "|+", y]),
+                name="move_tally",
+            ),
+        }
+    )
 
     system = PostCanonicalSystem(
         alphabet=alphabet,
@@ -215,9 +217,9 @@ def demo_variable_kinds() -> None:
     alphabet = Alphabet("ab")
 
     # Create variables of each kind
-    any_var = Variable.any("any")           # Can match "", "a", "ab", etc.
+    any_var = Variable.any("any")  # Can match "", "a", "ab", etc.
     nonempty = Variable.non_empty("nonempty")  # Must match at least one char
-    single = Variable.single("single")         # Must match exactly one char
+    single = Variable.single("single")  # Must match exactly one char
 
     print("Variable kinds:")
     print(f"  {any_var} (ANY) - matches any string including empty")
