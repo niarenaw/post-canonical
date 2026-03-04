@@ -31,7 +31,7 @@ def to_dot(derivation: Derivation) -> str:
     lines = ["digraph derivation {"]
 
     for step in derivation.steps:
-        rule_name = step.rule.name or "rule"
+        rule_name = step.rule.display_name
         # For multi-input rules, create edges from each input
         for input_word in step.inputs:
             escaped_input = _escape_dot_string(input_word)
@@ -65,7 +65,7 @@ def to_latex(derivation: Derivation) -> str:
     lines = ["\\begin{align*}"]
 
     for i, step in enumerate(derivation.steps):
-        rule_name = step.rule.name or "rule"
+        rule_name = step.rule.display_name
         escaped_rule = _escape_latex(rule_name)
 
         # Format inputs (join with comma for multi-antecedent rules)
@@ -118,7 +118,7 @@ def to_ascii_tree(derivation: Derivation) -> str:
     # Each step shows input(s) and the rule used to derive the output
     for i in range(len(steps) - 1, -1, -1):
         step = steps[i]
-        rule_name = step.rule.name or "rule"
+        rule_name = step.rule.display_name
         indent = "    " * (len(steps) - 1 - i)
 
         for input_word in step.inputs:
@@ -155,7 +155,7 @@ def to_mermaid(derivation: Derivation) -> str:
     lines = ["graph TD"]
 
     for step in derivation.steps:
-        rule_name = step.rule.name or "rule"
+        rule_name = step.rule.display_name
         # For multi-input rules, create edges from each input
         for input_word in step.inputs:
             escaped_input = _escape_mermaid_node(input_word)

@@ -204,24 +204,15 @@ Rule Syntax:
         name = args[0]
         kind_str = args[1] if len(args) > 1 else "any"
 
-        kind_map = {
-            "any": VariableKind.ANY,
-            "non_empty": VariableKind.NON_EMPTY,
-            "nonempty": VariableKind.NON_EMPTY,
-            "single": VariableKind.SINGLE,
-        }
-
-        kind_str_lower = kind_str.lower()
-        if kind_str_lower not in kind_map:
-            valid = ", ".join(sorted(set(kind_map.keys()) - {"nonempty"}))
-            self._print_error(f"Unknown kind '{kind_str}'. Valid kinds: {valid}")
+        try:
+            kind = VariableKind.from_str(kind_str)
+        except ValueError as e:
+            self._print_error(str(e))
             return
 
         if name in self._variables:
             self._print_error(f"Variable '{name}' already defined.")
             return
-
-        kind = kind_map[kind_str_lower]
         self._variables[name] = kind
         self._invalidate_system()
         self._print_success(f"Variable added: {name} ({kind.name})")
@@ -442,16 +433,11 @@ Rule Syntax:
             print(f"'{target}' is not reachable (explored {result.steps_explored} words)")
             return
 
-        # Find the DerivedWord to get its trace.
-        for dw in system.iterate():
-            if dw.word == target:
-                print(dw.trace())
-                return
+        from .system.derivation import DerivedWord
 
-        # Fallback if axiom (iterate might skip axioms in trace).
-        if target in system.axioms:
-            print(f"Word: '{target}'")
-            print("  (axiom)")
+        assert result.derivation is not None  # Guaranteed when found is True
+        dw = DerivedWord(word=target, derivation=result.derivation)
+        print(dw.trace())
 
     def do_load(self, arg: str) -> None:
         """Load a system from a JSON file.
@@ -485,7 +471,7 @@ Rule Syntax:
         self._alphabet = system.alphabet
         self._variables = {v.name: v.kind for v in system.variables}
         self._axioms = set(system.axioms)
-        self._rules = [str(rule).lstrip(f"[{rule.name}] ") if rule.name else str(rule) for rule in system.rules]
+        self._rules = [rule.pattern_str for rule in system.rules]
 
     def do_save(self, arg: str) -> None:
         """Save the current system to a JSON file.

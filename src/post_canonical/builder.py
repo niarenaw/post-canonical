@@ -14,7 +14,7 @@ Example:
 
 from __future__ import annotations
 
-from typing import ClassVar, Self
+from typing import Self
 
 from .core.alphabet import Alphabet
 from .core.errors import format_set
@@ -54,14 +54,6 @@ class SystemBuilder:
             .build())
     """
 
-    # Maps user-friendly kind names to VariableKind enum
-    _KIND_MAP: ClassVar[dict[str, VariableKind]] = {
-        "any": VariableKind.ANY,
-        "non_empty": VariableKind.NON_EMPTY,
-        "nonempty": VariableKind.NON_EMPTY,
-        "single": VariableKind.SINGLE,
-    }
-
     def __init__(self, alphabet: str | Alphabet) -> None:
         """Initialize builder with an alphabet.
 
@@ -93,12 +85,12 @@ class SystemBuilder:
         if name in self._variables:
             raise BuilderError(f"Variable '{name}' already declared")
 
-        kind_lower = kind.lower()
-        if kind_lower not in self._KIND_MAP:
-            valid = ", ".join(sorted(self._KIND_MAP.keys()))
-            raise BuilderError(f"Unknown variable kind '{kind}'. Valid: {valid}")
+        try:
+            var_kind = VariableKind.from_str(kind)
+        except ValueError as e:
+            raise BuilderError(str(e)) from None
 
-        self._variables[name] = Variable(name, self._KIND_MAP[kind_lower])
+        self._variables[name] = Variable(name, var_kind)
         return self
 
     def axiom(self, word: str) -> Self:

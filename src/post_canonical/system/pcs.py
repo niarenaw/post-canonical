@@ -178,6 +178,6 @@ class PostCanonicalSystem:
             "",
             "Rules:",
         ]
-        for rule in sorted(self.rules, key=lambda r: (-r.priority, r.name or "")):
+        for rule in sorted(self.rules, key=lambda r: r.sort_key):
             lines.append(f"  {rule}")
         return "\n".join(lines)

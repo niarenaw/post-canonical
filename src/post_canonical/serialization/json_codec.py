@@ -98,7 +98,7 @@ class PCSJsonCodec:
                 for v in sorted(system.variables, key=lambda v: v.name)
             ],
             "axioms": list(sorted(system.axioms)),
-            "rules": [self._rule_to_dict(r) for r in sorted(system.rules, key=lambda r: (-r.priority, r.name or ""))],
+            "rules": [self._rule_to_dict(r) for r in sorted(system.rules, key=lambda r: r.sort_key)],
         }
 
     def _rule_to_dict(self, rule: ProductionRule) -> dict[str, Any]:
