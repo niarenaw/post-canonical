@@ -68,7 +68,7 @@ from .system.executor import ExecutionConfig, ExecutionMode
 # System
 from .system.pcs import PostCanonicalSystem
 
-__version__ = "2.0.0"
+__version__ = "2.2.0"
 
 __all__ = [
     # Preset alphabets
