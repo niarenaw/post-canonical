@@ -12,6 +12,28 @@ class VariableKind(Enum):
     NON_EMPTY = auto()  # Matches at least one symbol
     SINGLE = auto()  # Matches exactly one symbol
 
+    @classmethod
+    def from_str(cls, name: str) -> "VariableKind":
+        """Parse a user-facing kind string into a VariableKind.
+
+        Accepts lowercase names like "any", "non_empty", "nonempty", "single".
+        """
+        key = name.lower()
+        if key not in _KIND_ALIASES:
+            valid = ", ".join(sorted(k for k in _KIND_ALIASES if k != "nonempty"))
+            raise ValueError(f"Unknown variable kind '{name}'. Valid: {valid}")
+        return _KIND_ALIASES[key]
+
+
+# Canonical mapping from user-facing kind strings to enum values. Used by
+# SystemBuilder, the CLI REPL, and anywhere else that needs to parse kind names.
+_KIND_ALIASES: dict[str, VariableKind] = {
+    "any": VariableKind.ANY,
+    "non_empty": VariableKind.NON_EMPTY,
+    "nonempty": VariableKind.NON_EMPTY,
+    "single": VariableKind.SINGLE,
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Variable:

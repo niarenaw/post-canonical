@@ -23,7 +23,7 @@ class DerivationStep:
 
     def __str__(self) -> str:
         inputs_str = ", ".join(f"'{w}'" for w in self.inputs)
-        rule_name = self.rule.name or "rule"
+        rule_name = self.rule.display_name
         return f"{inputs_str} --[{rule_name}]--> '{self.output}'"
 
     def __repr__(self) -> str:

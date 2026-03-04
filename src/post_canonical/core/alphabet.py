@@ -14,14 +14,11 @@ class Alphabet:
     """
 
     symbols: frozenset[str]
+    _sorted: tuple[str, ...]
 
     def __init__(self, symbols: str | frozenset[str] | set[str]) -> None:
-        if isinstance(symbols, str):
-            symbol_set = frozenset(symbols)
-        else:
-            symbol_set = frozenset(symbols)
+        symbol_set = frozenset(symbols)
 
-        # Validate: each symbol must be a single character
         for s in symbol_set:
             if len(s) != 1:
                 raise ValueError(f"Alphabet symbols must be single characters, got: '{s}'")
@@ -30,18 +27,19 @@ class Alphabet:
             raise ValueError("Alphabet cannot be empty")
 
         object.__setattr__(self, "symbols", symbol_set)
+        object.__setattr__(self, "_sorted", tuple(sorted(symbol_set)))
 
     def __contains__(self, item: str) -> bool:
         return item in self.symbols
 
     def __iter__(self) -> Iterator[str]:
-        return iter(sorted(self.symbols))
+        return iter(self._sorted)
 
     def __len__(self) -> int:
         return len(self.symbols)
 
     def __str__(self) -> str:
-        return "{" + ", ".join(sorted(self.symbols)) + "}"
+        return "{" + ", ".join(self._sorted) + "}"
 
     def __repr__(self) -> str:
         return f"Alphabet({self})"

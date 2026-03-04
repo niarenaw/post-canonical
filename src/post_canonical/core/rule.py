@@ -65,10 +65,25 @@ class ProductionRule:
         """True if rule has exactly one antecedent."""
         return len(self.antecedents) == 1
 
-    def __str__(self) -> str:
+    @property
+    def display_name(self) -> str:
+        """Human-readable name, falling back to 'rule' if unnamed."""
+        return self.name or "rule"
+
+    @property
+    def sort_key(self) -> tuple[int, str]:
+        """Canonical sort key: descending priority, then alphabetical name."""
+        return (-self.priority, self.name or "")
+
+    @property
+    def pattern_str(self) -> str:
+        """The rule's pattern string without the name prefix."""
         antes = ", ".join(str(a) for a in self.antecedents)
+        return f"{antes} -> {self.consequent}"
+
+    def __str__(self) -> str:
         name_part = f"[{self.name}] " if self.name else ""
-        return f"{name_part}{antes} -> {self.consequent}"
+        return f"{name_part}{self.pattern_str}"
 
     def __repr__(self) -> str:
         return f"ProductionRule({self})"

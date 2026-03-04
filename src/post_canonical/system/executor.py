@@ -46,11 +46,7 @@ class RuleExecutor:
         self.matcher = PatternMatcher(alphabet)
         self.unifier = MultiPatternUnifier(self.matcher)
 
-        # Sort rules by priority (descending), then by name
-        self._sorted_rules = sorted(
-            rules,
-            key=lambda r: (-r.priority, r.name or ""),
-        )
+        self._sorted_rules = sorted(rules, key=lambda r: r.sort_key)
 
     def apply_rules(
         self,
@@ -90,29 +86,22 @@ class RuleExecutor:
         Useful for exhaustive exploration.
         """
         for rule in self._sorted_rules:
-            yield from self._apply_rule_all(rule, words)
+            if rule.is_single_antecedent:
+                yield from self._apply_single_antecedent(rule, words)
+            else:
+                yield from self._apply_multi_antecedent(rule, words)
 
     def _apply_rule(
         self,
         rule: ProductionRule,
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
-        """Apply a single rule to available words."""
-        if rule.is_single_antecedent:
-            yield from self._apply_single_antecedent(rule, words)
-        else:
-            yield from self._apply_multi_antecedent(rule, words)
-
-    def _apply_rule_all(
-        self,
-        rule: ProductionRule,
-        words: frozenset[DerivedWord],
-    ) -> Iterator[DerivedWord]:
-        """Apply a single rule, yielding all possible results."""
-        if rule.is_single_antecedent:
-            yield from self._apply_single_antecedent_all(rule, words)
-        else:
-            yield from self._apply_multi_antecedent_all(rule, words)
+        """Apply a single rule, respecting execution mode for early return."""
+        source = self._apply_single_antecedent if rule.is_single_antecedent else self._apply_multi_antecedent
+        for derived in source(rule, words):
+            yield derived
+            if self.config.mode == ExecutionMode.DETERMINISTIC:
+                return
 
     def _create_derivation_step(
         self,
@@ -139,18 +128,7 @@ class RuleExecutor:
         rule: ProductionRule,
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
-        """Apply rule with single antecedent (respects execution mode)."""
-        for derived in self._apply_single_antecedent_all(rule, words):
-            yield derived
-            if self.config.mode == ExecutionMode.DETERMINISTIC:
-                return
-
-    def _apply_single_antecedent_all(
-        self,
-        rule: ProductionRule,
-        words: frozenset[DerivedWord],
-    ) -> Iterator[DerivedWord]:
-        """Apply rule with single antecedent (all matches)."""
+        """Apply rule with single antecedent, yielding all matches."""
         pattern = rule.antecedents[0]
 
         for derived_word in words:
@@ -168,18 +146,7 @@ class RuleExecutor:
         rule: ProductionRule,
         words: frozenset[DerivedWord],
     ) -> Iterator[DerivedWord]:
-        """Apply rule with multiple antecedents (respects execution mode)."""
-        for derived in self._apply_multi_antecedent_all(rule, words):
-            yield derived
-            if self.config.mode == ExecutionMode.DETERMINISTIC:
-                return
-
-    def _apply_multi_antecedent_all(
-        self,
-        rule: ProductionRule,
-        words: frozenset[DerivedWord],
-    ) -> Iterator[DerivedWord]:
-        """Apply rule with multiple antecedents (all matches)."""
+        """Apply rule with multiple antecedents, yielding all matches."""
         word_map = {dw.word: dw for dw in words}
         raw_words = list(word_map.keys())
 
