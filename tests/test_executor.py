@@ -8,7 +8,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 from post_canonical.system.derivation import DerivedWord
 from post_canonical.system.executor import RuleExecutor
 
@@ -245,6 +245,35 @@ class TestExecutorMultiAntecedent:
         # Should find x="1" as the common prefix
         result_words = {r.word for r in results}
         assert "1" in result_words
+
+    def test_shared_var_across_antecedents_must_unify(self) -> None:
+        """A variable appearing in two antecedents must bind consistently.
+
+        Pattern set [x0, x1] reads "find two words sharing a common prefix
+        x, where one ends in 0 and the other in 1." Among "10" and "11"
+        there is exactly one such pair (x="1"); among "10" and "21" there
+        is none.
+        """
+        x = Variable.any("x")
+        rule = ProductionRule(
+            [Pattern([x, "0"]), Pattern([x, "1"])],
+            Pattern([x]),
+            name="extract_common",
+        )
+        config = ExecutionConfig(mode=ExecutionMode.NON_DETERMINISTIC)
+        executor = RuleExecutor(BINARY, frozenset({rule}), config)
+
+        # x="1" common prefix exists across "10" and "11".
+        words = frozenset({DerivedWord.axiom("10"), DerivedWord.axiom("11")})
+        result_words = {r.word for r in executor.apply_rules(words)}
+        assert result_words == {"1"}
+
+        # "10" matches [x, "0"] only with x="1"; "01" matches [x, "1"] only
+        # with x="0". The shared variable cannot be both, so unification fails
+        # and the rule produces nothing.
+        words2 = frozenset({DerivedWord.axiom("10"), DerivedWord.axiom("01")})
+        result_words2 = {r.word for r in executor.apply_rules(words2)}
+        assert result_words2 == set()
 
     def test_multi_antecedent_needs_distinct_words(self) -> None:
         """Multi-antecedent rule uses permutations which require sufficient words.

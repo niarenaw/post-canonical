@@ -25,6 +25,11 @@ class ProductionRule:
     consequent: Pattern
     priority: int = 0
     name: str | None = None
+    # Always overwritten in __init__ to (-priority, name or "") for fast
+    # access in the executor's per-step rule sort. The literal default
+    # exists only to satisfy the dataclass's "fields with defaults must
+    # follow fields with defaults" rule.
+    sort_key: tuple[int, str] = (0, "")
 
     def __init__(
         self,
@@ -40,6 +45,9 @@ class ProductionRule:
         object.__setattr__(self, "consequent", consequent)
         object.__setattr__(self, "priority", priority)
         object.__setattr__(self, "name", name)
+        # Materialize the sort key once so executors can read it as a plain
+        # attribute rather than re-evaluating a property on every access.
+        object.__setattr__(self, "sort_key", (-priority, name or ""))
 
         # Validate: consequent can only use variables from antecedents
         antecedent_vars: set[str] = set()
@@ -69,11 +77,6 @@ class ProductionRule:
     def display_name(self) -> str:
         """Human-readable name, falling back to 'rule' if unnamed."""
         return self.name or "rule"
-
-    @property
-    def sort_key(self) -> tuple[int, str]:
-        """Canonical sort key: descending priority, then alphabetical name."""
-        return (-self.priority, self.name or "")
 
     @property
     def pattern_str(self) -> str:

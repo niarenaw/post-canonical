@@ -15,7 +15,7 @@ from post_canonical import (
     Variable,
     VariableKind,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 
 
 class TestCodecEncode:
@@ -222,7 +222,7 @@ class TestCodecDecode:
         """
 
         codec = PCSJsonCodec()
-        with pytest.raises(ValueError, match="Unsupported version"):
+        with pytest.raises(ValueError, match="Unsupported JSON schema version"):
             codec.decode(json_str)
 
     def test_decode_missing_field_raises(self) -> None:

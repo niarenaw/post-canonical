@@ -1,7 +1,7 @@
 """Reachability queries for Post Canonical Systems."""
 
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from ..system.derivation import Derivation
@@ -11,15 +11,15 @@ if TYPE_CHECKING:
     from ..system.pcs import PostCanonicalSystem
 
 
-class QueryResult(Enum):
+class QueryResult(StrEnum):
     """Result of a derivability query."""
 
-    DERIVABLE = auto()  # Word is definitely derivable
-    NOT_FOUND = auto()  # Could not find derivation within limits
-    # Note: We can never prove NOT_DERIVABLE for infinite systems
+    DERIVABLE = "derivable"  # Word is definitely derivable
+    NOT_FOUND = "not_found"  # Could not find derivation within limits
+    # Note: we can never prove NOT_DERIVABLE for infinite systems.
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ReachabilityResult:
     """Full result of a reachability query."""
 

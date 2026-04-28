@@ -4,13 +4,14 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from ..core.alphabet import Alphabet
+from ..core.errors import ValidationError, format_set
 from ..core.rule import ProductionRule
 from ..core.variable import Variable
 from .derivation import DerivedWord
 from .executor import ExecutionConfig, ExecutionMode, RuleExecutor
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PostCanonicalSystem:
     """A Post Canonical System with full derivation tracking.
 
@@ -45,24 +46,58 @@ class PostCanonicalSystem:
         """Ensure word uses only alphabet symbols."""
         invalid = self.alphabet.validate_word(word)
         if invalid:
-            raise ValueError(f"Word '{word}' contains invalid characters: {invalid}")
+            raise ValidationError(
+                "Word contains characters not in the alphabet",
+                context={
+                    "word": word,
+                    "invalid_characters": format_set(set(invalid)),
+                    "alphabet": str(self.alphabet),
+                },
+            )
 
     def _validate_rule(self, rule: ProductionRule) -> None:
         """Validate rule patterns against alphabet and variables."""
-        # Check all variables in rule are declared
         for var in rule.all_variables:
             if var not in self.variables:
-                raise ValueError(f"Undeclared variable in rule: {var}")
+                raise ValidationError(
+                    "Rule references an undeclared variable",
+                    context={
+                        "rule": rule.display_name,
+                        "variable": var.name,
+                        "declared": format_set(v.name for v in self.variables),
+                    },
+                    hint="Add the variable via SystemBuilder.var() or check spelling.",
+                )
 
-        # Validate constant parts of patterns
         for ante in rule.antecedents:
             errors = ante.validate_against_alphabet(self.alphabet)
             if errors:
-                raise ValueError(f"Invalid antecedent in rule '{rule.name}': {errors}")
+                raise ValidationError(
+                    "Antecedent uses characters not in the alphabet",
+                    context=self._pattern_error_context(rule, "antecedent", ante, errors),
+                )
 
         errors = rule.consequent.validate_against_alphabet(self.alphabet)
         if errors:
-            raise ValueError(f"Invalid consequent in rule '{rule.name}': {errors}")
+            raise ValidationError(
+                "Consequent uses characters not in the alphabet",
+                context=self._pattern_error_context(rule, "consequent", rule.consequent, errors),
+            )
+
+    def _pattern_error_context(
+        self,
+        rule: ProductionRule,
+        role: str,
+        pattern: object,
+        errors: list[str],
+    ) -> dict[str, str]:
+        """Build the structured error context for a pattern-vs-alphabet failure."""
+        return {
+            "rule": rule.display_name,
+            role: str(pattern),
+            "issues": "; ".join(errors),
+            "alphabet": str(self.alphabet),
+        }
 
     # === Generation ===
 
@@ -70,24 +105,29 @@ class PostCanonicalSystem:
         self,
         max_steps: int = 10,
         mode: ExecutionMode = ExecutionMode.NON_DETERMINISTIC,
-    ) -> frozenset[DerivedWord]:
-        """Generate all derivable words up to max_steps.
+    ) -> tuple[DerivedWord, ...]:
+        """Generate all derivable words up to ``max_steps``.
 
-        Returns DerivedWord objects that include derivation history.
+        Returns ``DerivedWord`` objects (each carrying its derivation
+        history) ordered first by word length, then lexicographically.
         Uses breadth-first exploration.
 
         Args:
-            max_steps: Maximum number of derivation rounds
+            max_steps: Maximum number of derivation rounds. Defaults to 10
+                so that systems with explosive growth (or accidental infinite
+                loops) terminate quickly. Raise it for deeper exploration,
+                or use ``iterate()`` for unbounded lazy traversal.
             mode: Execution mode (DETERMINISTIC or NON_DETERMINISTIC)
 
         Returns:
-            Frozen set of all derived words with their derivations
+            Ordered tuple of all derived words with their derivations.
+            The order is deterministic: ``(len(word), word)``.
         """
         config = ExecutionConfig(mode=mode)
         executor = RuleExecutor(self.alphabet, self.rules, config)
 
         # Initialize with axioms
-        current: frozenset[DerivedWord] = frozenset(DerivedWord.axiom(w) for w in self.axioms)
+        current: list[DerivedWord] = [DerivedWord.axiom(w) for w in self.axioms]
         all_words: dict[str, DerivedWord] = {dw.word: dw for dw in current}
 
         for _ in range(max_steps):
@@ -101,20 +141,21 @@ class PostCanonicalSystem:
             if not new_words:
                 break  # Fixed point reached
 
-            current = frozenset(new_words)
+            current = new_words
 
-        return frozenset(all_words.values())
+        return tuple(sorted(all_words.values(), key=lambda dw: (len(dw.word), dw.word)))
 
     def generate_words(
         self,
         max_steps: int = 10,
         mode: ExecutionMode = ExecutionMode.NON_DETERMINISTIC,
-    ) -> frozenset[str]:
+    ) -> tuple[str, ...]:
         """Generate all derivable words (without derivation info).
 
-        Convenience method that returns just the word strings.
+        Returns word strings in the same deterministic order as
+        :meth:`generate`: by length, then lexicographic.
         """
-        return frozenset(dw.word for dw in self.generate(max_steps, mode))
+        return tuple(dw.word for dw in self.generate(max_steps, mode))
 
     # === Iteration ===
 
@@ -147,7 +188,7 @@ class PostCanonicalSystem:
         while frontier:
             next_frontier: list[DerivedWord] = []
 
-            for derived in executor.apply_rules_all(frozenset(frontier)):
+            for derived in executor.apply_rules_all(frontier):
                 if derived.word not in seen:
                     seen.add(derived.word)
                     yield derived

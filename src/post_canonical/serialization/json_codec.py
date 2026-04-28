@@ -115,7 +115,11 @@ class PCSJsonCodec:
         # Check version compatibility
         version = data.get("version", "1.0")
         if version != self.VERSION:
-            raise ValueError(f"Unsupported version: {version}")
+            raise ValueError(
+                f"Unsupported JSON schema version '{version}'. "
+                f"This codec supports version '{self.VERSION}'. "
+                f"Re-encode the system with the current codec to migrate."
+            )
 
         # Parse variables first (needed for patterns)
         variables: dict[str, Variable] = {}

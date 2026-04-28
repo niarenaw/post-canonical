@@ -40,3 +40,7 @@ class ValidationError(ValueError):
             lines.append(f"  Hint: {hint}")
 
         super().__init__("\n".join(lines))
+
+
+class PatternError(ValidationError):
+    """Raised when a pattern string fails to parse or references unknown symbols."""

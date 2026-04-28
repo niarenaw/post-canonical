@@ -10,7 +10,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 
 
 class TestPCSCreation:
@@ -70,7 +70,7 @@ class TestPCSValidation:
         x = Variable.any("x")
         rule = ProductionRule([Pattern([x])], Pattern([x]))
 
-        with pytest.raises(ValueError, match="invalid characters"):
+        with pytest.raises(ValueError, match="characters not in the alphabet"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"01X"}),  # X not in alphabet
@@ -84,7 +84,7 @@ class TestPCSValidation:
         y = Variable.any("y")  # Not declared in system
         rule = ProductionRule([Pattern([x, y])], Pattern([x]))
 
-        with pytest.raises(ValueError, match="Undeclared variable"):
+        with pytest.raises(ValueError, match="undeclared variable"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"01"}),
@@ -100,7 +100,7 @@ class TestPCSValidation:
             Pattern([x, "X"]),  # X not in alphabet
         )
 
-        with pytest.raises(ValueError, match="Invalid"):
+        with pytest.raises(ValueError, match="characters not in the alphabet"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"0"}),
@@ -182,8 +182,10 @@ class TestPCSGeneration:
         )
 
         words = pcs.generate_words(max_steps=2)
-        assert isinstance(words, frozenset)
+        assert isinstance(words, tuple)
         assert all(isinstance(w, str) for w in words)
+        # Order is deterministic: by length, then lexicographic
+        assert list(words) == sorted(words, key=lambda w: (len(w), w))
 
     def test_generate_deterministic_mode(self, mu_system: PostCanonicalSystem) -> None:
         """Generation in deterministic mode."""
@@ -257,6 +259,20 @@ class TestPCSIteration:
 
         assert "MI" in words_found
         assert "MII" in words_found
+
+    def test_iterate_islice_bounded(self, palindrome_generator: PostCanonicalSystem) -> None:
+        """``itertools.islice`` should bound the lazy generator cleanly.
+
+        Palindrome systems produce an unbounded set; the test only fails
+        if iterate() over-produces or fails to terminate when sliced.
+        """
+        import itertools
+
+        first_50 = list(itertools.islice(palindrome_generator.iterate(), 50))
+        assert len(first_50) == 50
+        # Yielded in BFS order, so derivation lengths are non-decreasing.
+        depths = [dw.derivation.length for dw in first_50]
+        assert depths == sorted(depths)
 
 
 class TestPCSMultiAntecedent:

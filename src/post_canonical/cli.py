@@ -33,6 +33,8 @@ from __future__ import annotations
 import cmd
 import shlex
 import sys
+from collections.abc import Sequence
+from itertools import batched
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -81,7 +83,8 @@ class PCSRepl(cmd.Cmd):
             return None
 
         try:
-            builder = SystemBuilder(self._alphabet)  # type: ignore[arg-type]
+            assert self._alphabet is not None, "alphabet must be set before building"
+            builder = SystemBuilder(self._alphabet)
             for name, kind in self._variables.items():
                 builder.var(name, kind.name.lower())
             for axiom in self._axioms:
@@ -103,7 +106,7 @@ class PCSRepl(cmd.Cmd):
         if self._alphabet is None:
             return "No alphabet set. Use 'alphabet <symbols>' first."
         if not self._axioms:
-            return "No axioms defined. Use 'axiom <word>' first."
+            return "No axioms defined. Use 'axiom <word>' first (e.g., 'axiom MI')."
         if not self._rules:
             return "No rules defined. Use 'rule \"<pattern>\"' first."
         return None
@@ -277,9 +280,7 @@ Rule Syntax:
         self._rules.append(pattern)
         self._invalidate_system()
 
-        parts = pattern.split("->", 1)
-        display = f"{parts[0].strip()} -> {parts[1].strip()}"
-        self._print_success(f"Rule added: {display}")
+        self._print_success(f"Rule added: {_format_rule_string(pattern)}")
 
     def do_show(self, arg: str) -> None:
         """Display current system configuration.
@@ -312,9 +313,7 @@ Rule Syntax:
         if self._rules:
             print("Rules:")
             for i, rule in enumerate(self._rules, 1):
-                parts = rule.split("->", 1)
-                display = f"{parts[0].strip()} -> {parts[1].strip()}"
-                print(f"  {i}. {display}")
+                print(f"  {i}. {_format_rule_string(rule)}")
         else:
             print("Rules:     (none)")
 
@@ -357,7 +356,7 @@ Rule Syntax:
         except Exception as e:
             self._print_error(f"Generation failed: {e}")
 
-    def _print_word_list(self, words: list[str], indent: int = 2) -> None:
+    def _print_word_list(self, words: Sequence[str], indent: int = 2) -> None:
         """Print a list of words in a compact, aligned format."""
         if not words:
             print(" " * indent + "(none)")
@@ -365,16 +364,8 @@ Rule Syntax:
 
         prefix = " " * indent
         max_per_line = 8
-        line_words: list[str] = []
-
-        for word in words:
-            line_words.append(word)
-            if len(line_words) >= max_per_line:
-                print(prefix + ", ".join(line_words))
-                line_words = []
-
-        if line_words:
-            print(prefix + ", ".join(line_words))
+        for batch in batched(words, max_per_line):
+            print(prefix + ", ".join(batch))
 
     def do_query(self, arg: str) -> None:
         """Check if a word is reachable from the axioms.
@@ -540,6 +531,12 @@ Rule Syntax:
         """Handle unknown commands."""
         cmd_name = line.split()[0] if line.split() else line
         self._print_error(f"Unknown command: '{cmd_name}'. Type 'help' for available commands.")
+
+
+def _format_rule_string(pattern: str) -> str:
+    """Render a raw rule string with normalized whitespace around the arrow."""
+    antecedent, consequent = pattern.split("->", 1)
+    return f"{antecedent.strip()} -> {consequent.strip()}"
 
 
 def main() -> None:

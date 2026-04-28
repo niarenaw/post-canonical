@@ -35,6 +35,9 @@ Example usage:
     print(result)
 """
 
+# Builder DSL
+from .builder import SystemBuilder
+
 # Core types
 from .core.alphabet import Alphabet
 from .core.pattern import Pattern
@@ -42,7 +45,7 @@ from .core.rule import ProductionRule
 from .core.variable import Variable, VariableKind
 
 # Presets
-from .presets.alphabets import (
+from .presets import (
     BINARY,
     DECIMAL,
     ENGLISH_LETTERS,
@@ -50,8 +53,6 @@ from .presets.alphabets import (
     ENGLISH_UPPERCASE,
     HEXADECIMAL,
     MIU,
-)
-from .presets.examples import (
     create_binary_doubler,
     create_mu_puzzle,
     create_palindrome_generator,
@@ -68,7 +69,10 @@ from .system.executor import ExecutionConfig, ExecutionMode
 # System
 from .system.pcs import PostCanonicalSystem
 
-__version__ = "2.2.0"
+# Visualization exporters
+from .visualization import to_ascii_tree, to_dot, to_latex, to_mermaid
+
+__version__ = "3.0.0"
 
 __all__ = [
     # Preset alphabets
@@ -96,10 +100,17 @@ __all__ = [
     "QueryResult",
     "ReachabilityQuery",
     "ReachabilityResult",
+    # Builder DSL
+    "SystemBuilder",
     "Variable",
     "VariableKind",
     "create_binary_doubler",
     # Preset examples
     "create_mu_puzzle",
     "create_palindrome_generator",
+    # Visualization exporters
+    "to_ascii_tree",
+    "to_dot",
+    "to_latex",
+    "to_mermaid",
 ]
