@@ -33,6 +33,8 @@ from __future__ import annotations
 import cmd
 import shlex
 import sys
+from collections.abc import Sequence
+from itertools import batched
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -104,7 +106,7 @@ class PCSRepl(cmd.Cmd):
         if self._alphabet is None:
             return "No alphabet set. Use 'alphabet <symbols>' first."
         if not self._axioms:
-            return "No axioms defined. Use 'axiom <word>' first."
+            return "No axioms defined. Use 'axiom <word>' first (e.g., 'axiom MI')."
         if not self._rules:
             return "No rules defined. Use 'rule \"<pattern>\"' first."
         return None
@@ -358,7 +360,7 @@ Rule Syntax:
         except Exception as e:
             self._print_error(f"Generation failed: {e}")
 
-    def _print_word_list(self, words: list[str], indent: int = 2) -> None:
+    def _print_word_list(self, words: Sequence[str], indent: int = 2) -> None:
         """Print a list of words in a compact, aligned format."""
         if not words:
             print(" " * indent + "(none)")
@@ -366,16 +368,8 @@ Rule Syntax:
 
         prefix = " " * indent
         max_per_line = 8
-        line_words: list[str] = []
-
-        for word in words:
-            line_words.append(word)
-            if len(line_words) >= max_per_line:
-                print(prefix + ", ".join(line_words))
-                line_words = []
-
-        if line_words:
-            print(prefix + ", ".join(line_words))
+        for batch in batched(words, max_per_line):
+            print(prefix + ", ".join(batch))
 
     def do_query(self, arg: str) -> None:
         """Check if a word is reachable from the axioms.
