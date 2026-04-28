@@ -260,6 +260,20 @@ class TestPCSIteration:
         assert "MI" in words_found
         assert "MII" in words_found
 
+    def test_iterate_islice_bounded(self, palindrome_generator: PostCanonicalSystem) -> None:
+        """``itertools.islice`` should bound the lazy generator cleanly.
+
+        Palindrome systems produce an unbounded set; the test only fails
+        if iterate() over-produces or fails to terminate when sliced.
+        """
+        import itertools
+
+        first_50 = list(itertools.islice(palindrome_generator.iterate(), 50))
+        assert len(first_50) == 50
+        # Yielded in BFS order, so derivation lengths are non-decreasing.
+        depths = [dw.derivation.length for dw in first_50]
+        assert depths == sorted(depths)
+
 
 class TestPCSMultiAntecedent:
     """Tests for systems with multi-antecedent rules."""
