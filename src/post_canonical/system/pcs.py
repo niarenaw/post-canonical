@@ -90,7 +90,7 @@ class PostCanonicalSystem:
         executor = RuleExecutor(self.alphabet, self.rules, config)
 
         # Initialize with axioms
-        current: frozenset[DerivedWord] = frozenset(DerivedWord.axiom(w) for w in self.axioms)
+        current: list[DerivedWord] = [DerivedWord.axiom(w) for w in self.axioms]
         all_words: dict[str, DerivedWord] = {dw.word: dw for dw in current}
 
         for _ in range(max_steps):
@@ -104,7 +104,7 @@ class PostCanonicalSystem:
             if not new_words:
                 break  # Fixed point reached
 
-            current = frozenset(new_words)
+            current = new_words
 
         return frozenset(all_words.values())
 
@@ -150,7 +150,7 @@ class PostCanonicalSystem:
         while frontier:
             next_frontier: list[DerivedWord] = []
 
-            for derived in executor.apply_rules_all(frozenset(frontier)):
+            for derived in executor.apply_rules_all(frontier):
                 if derived.word not in seen:
                     seen.add(derived.word)
                     yield derived

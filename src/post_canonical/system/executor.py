@@ -1,6 +1,6 @@
 """Rule execution engine for Post Canonical Systems."""
 
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -50,7 +50,7 @@ class RuleExecutor:
 
     def apply_rules(
         self,
-        words: frozenset[DerivedWord],
+        words: Collection[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply all applicable rules to produce new derived words.
 
@@ -78,7 +78,7 @@ class RuleExecutor:
 
     def apply_rules_all(
         self,
-        words: frozenset[DerivedWord],
+        words: Collection[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply all rules and yield all possible results.
 
@@ -94,7 +94,7 @@ class RuleExecutor:
     def _apply_rule(
         self,
         rule: ProductionRule,
-        words: frozenset[DerivedWord],
+        words: Collection[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply a single rule, respecting execution mode for early return."""
         source = self._apply_single_antecedent if rule.is_single_antecedent else self._apply_multi_antecedent
@@ -126,7 +126,7 @@ class RuleExecutor:
     def _apply_single_antecedent(
         self,
         rule: ProductionRule,
-        words: frozenset[DerivedWord],
+        words: Collection[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply rule with single antecedent, yielding all matches."""
         pattern = rule.antecedents[0]
@@ -144,7 +144,7 @@ class RuleExecutor:
     def _apply_multi_antecedent(
         self,
         rule: ProductionRule,
-        words: frozenset[DerivedWord],
+        words: Collection[DerivedWord],
     ) -> Iterator[DerivedWord]:
         """Apply rule with multiple antecedents, yielding all matches."""
         word_map = {dw.word: dw for dw in words}

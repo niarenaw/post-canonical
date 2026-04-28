@@ -18,7 +18,10 @@ class PatternMatcher:
     - Yields ALL matches (for non-determinism)
 
     The algorithm uses recursive backtracking to explore all possible
-    ways a pattern can match a word.
+    ways a pattern can match a word. To keep the inner loop allocation-free,
+    bindings are tracked in a mutable scratch dict and frozen into an
+    immutable :class:`Binding` only at the moment of yielding a successful
+    match.
     """
 
     def __init__(self, alphabet: Alphabet) -> None:
@@ -43,11 +46,12 @@ class PatternMatcher:
         Yields:
             Binding objects for each valid match
         """
-        if initial_binding is None:
-            initial_binding = Binding.empty()
-
         elements = pattern.elements
         suffix_min = self._compute_suffix_min_lengths(elements)
+
+        scratch: dict[str, str] = (
+            dict(initial_binding) if initial_binding is not None else {}
+        )
 
         yield from self._match_elements(
             elements=elements,
@@ -55,7 +59,7 @@ class PatternMatcher:
             elem_idx=0,
             word=word,
             pos=0,
-            binding=initial_binding,
+            scratch=scratch,
         )
 
     def match_first(
@@ -82,8 +86,9 @@ class PatternMatcher:
     def _compute_suffix_min_lengths(elements: tuple[PatternElement, ...]) -> list[int]:
         """Precompute minimum match length for each suffix of the elements array.
 
-        suffix_min[i] is the minimum length needed to match elements[i:]. This
-        avoids recomputing the sum on every backtracking node.
+        ``suffix_min[i]`` is the minimum length needed to match ``elements[i:]``.
+        This avoids recomputing the sum on every backtracking node and lets
+        the matcher prune branches that cannot possibly fit the remaining word.
         """
         n = len(elements)
         suffix_min = [0] * (n + 1)
@@ -102,48 +107,66 @@ class PatternMatcher:
         elem_idx: int,
         word: str,
         pos: int,
-        binding: Binding,
+        scratch: dict[str, str],
     ) -> Iterator[Binding]:
         """Recursive matching with backtracking.
 
         Uses an index into the elements tuple rather than slicing, to avoid
-        allocating intermediate tuples on each recursive call.
+        allocating intermediate tuples on each recursive call. Variable
+        bindings live in a mutable ``scratch`` dict that is mutated on the
+        way down and reverted on the way back up; only successful matches
+        pay the cost of constructing an immutable :class:`Binding`.
 
         Core algorithm:
-        1. If no more elements, succeed if we consumed entire word
-        2. If element is constant, must match exactly
-        3. If element is variable:
-           a. If already bound, must match bound value
-           b. If unbound, try all possible lengths (backtracking)
+
+        1. If no more elements, succeed if we consumed the entire word.
+        2. If the remaining word cannot fit the remaining minimum length, prune.
+        3. Constant element: must match exactly via :meth:`str.startswith`.
+        4. Variable element: either reuse the existing binding (consistency
+           check) or try every feasible length within the variable's kind.
         """
         if elem_idx >= len(elements):
             if pos == len(word):
-                yield binding
+                yield Binding(scratch)
+            return
+
+        # Length-feasibility prune: if what remains in `word` cannot fit
+        # the remaining minimum-length sum, no extension can succeed.
+        if len(word) - pos < suffix_min[elem_idx]:
             return
 
         elem = elements[elem_idx]
         next_idx = elem_idx + 1
 
         if isinstance(elem, str):
-            end_pos = pos + len(elem)
-            if end_pos <= len(word) and word[pos:end_pos] == elem:
-                yield from self._match_elements(elements, suffix_min, next_idx, word, end_pos, binding)
+            if word.startswith(elem, pos):
+                yield from self._match_elements(
+                    elements, suffix_min, next_idx, word, pos + len(elem), scratch
+                )
+            return
 
-        elif isinstance(elem, Variable):
-            if elem.name in binding:
-                bound_value = binding[elem.name]
-                end_pos = pos + len(bound_value)
-                if end_pos <= len(word) and word[pos:end_pos] == bound_value:
-                    yield from self._match_elements(elements, suffix_min, next_idx, word, end_pos, binding)
+        if isinstance(elem, Variable):
+            bound = scratch.get(elem.name)
+            if bound is not None:
+                if word.startswith(bound, pos):
+                    yield from self._match_elements(
+                        elements, suffix_min, next_idx, word, pos + len(bound), scratch
+                    )
+                return
+
+            min_len = elem.min_length()
+            if elem.kind == VariableKind.SINGLE:
+                max_len = 1
             else:
-                min_len = elem.min_length()
-                if elem.kind == VariableKind.SINGLE:
-                    max_len = 1
-                else:
-                    max_len = max(min_len, len(word) - pos - suffix_min[next_idx])
+                max_len = len(word) - pos - suffix_min[next_idx]
+                if max_len < min_len:
+                    return
 
-                for length in range(min_len, max_len + 1):
-                    value = word[pos : pos + length]
-                    new_binding = binding.extend(elem.name, value)
-                    if new_binding is not None:
-                        yield from self._match_elements(elements, suffix_min, next_idx, word, pos + length, new_binding)
+            name = elem.name
+            for length in range(min_len, max_len + 1):
+                scratch[name] = word[pos : pos + length]
+                yield from self._match_elements(
+                    elements, suffix_min, next_idx, word, pos + length, scratch
+                )
+            # Pop the variable on the way out so siblings see a clean scratch.
+            scratch.pop(name, None)
