@@ -102,10 +102,11 @@ class PostCanonicalSystem:
         self,
         max_steps: int = 10,
         mode: ExecutionMode = ExecutionMode.NON_DETERMINISTIC,
-    ) -> frozenset[DerivedWord]:
-        """Generate all derivable words up to max_steps.
+    ) -> tuple[DerivedWord, ...]:
+        """Generate all derivable words up to ``max_steps``.
 
-        Returns DerivedWord objects that include derivation history.
+        Returns ``DerivedWord`` objects (each carrying its derivation
+        history) ordered first by word length, then lexicographically.
         Uses breadth-first exploration.
 
         Args:
@@ -116,7 +117,8 @@ class PostCanonicalSystem:
             mode: Execution mode (DETERMINISTIC or NON_DETERMINISTIC)
 
         Returns:
-            Frozen set of all derived words with their derivations
+            Ordered tuple of all derived words with their derivations.
+            The order is deterministic: ``(len(word), word)``.
         """
         config = ExecutionConfig(mode=mode)
         executor = RuleExecutor(self.alphabet, self.rules, config)
@@ -138,18 +140,19 @@ class PostCanonicalSystem:
 
             current = new_words
 
-        return frozenset(all_words.values())
+        return tuple(sorted(all_words.values(), key=lambda dw: (len(dw.word), dw.word)))
 
     def generate_words(
         self,
         max_steps: int = 10,
         mode: ExecutionMode = ExecutionMode.NON_DETERMINISTIC,
-    ) -> frozenset[str]:
+    ) -> tuple[str, ...]:
         """Generate all derivable words (without derivation info).
 
-        Convenience method that returns just the word strings.
+        Returns word strings in the same deterministic order as
+        :meth:`generate`: by length, then lexicographic.
         """
-        return frozenset(dw.word for dw in self.generate(max_steps, mode))
+        return tuple(dw.word for dw in self.generate(max_steps, mode))
 
     # === Iteration ===
 

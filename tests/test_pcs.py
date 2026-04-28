@@ -182,8 +182,10 @@ class TestPCSGeneration:
         )
 
         words = pcs.generate_words(max_steps=2)
-        assert isinstance(words, frozenset)
+        assert isinstance(words, tuple)
         assert all(isinstance(w, str) for w in words)
+        # Order is deterministic: by length, then lexicographic
+        assert list(words) == sorted(words, key=lambda w: (len(w), w))
 
     def test_generate_deterministic_mode(self, mu_system: PostCanonicalSystem) -> None:
         """Generation in deterministic mode."""

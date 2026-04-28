@@ -52,11 +52,12 @@ system = (SystemBuilder("MIU")
 
 # Generate all derivable words up to 3 steps. The default `max_steps=10`
 # prevents accidental runaway on systems whose word set explodes; raise
-# it (or use `iterate()`) for deeper exploration.
+# it (or use `iterate()`) for deeper exploration. Results come back
+# already ordered by length, then lexicographically.
 words = system.generate_words(max_steps=3)
-print(sorted(words, key=lambda w: (len(w), w)))
-# ['MI', 'MII', 'MIU', 'MUI', 'MIIU', 'MIIII', 'MIUIU', 'MIIIIU',
-#  'MIIUIIU', 'MIIIIIIII', 'MIUIUIUIU']
+print(words)
+# ('MI', 'MII', 'MIU', 'MUI', 'MIIU', 'MIIII', 'MIUIU', 'MIIIIU',
+#  'MIIUIIU', 'MIIIIIIII', 'MIUIUIUIU')
 
 # Check if a word is reachable
 from post_canonical.query import ReachabilityQuery
