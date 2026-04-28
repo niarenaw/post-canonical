@@ -1,7 +1,6 @@
 """Multi-pattern unification for rules with multiple antecedents."""
 
 from collections.abc import Iterator, Sequence
-from itertools import permutations
 
 from ..core.pattern import Pattern
 from .binding import Binding
@@ -76,20 +75,62 @@ class MultiPatternUnifier:
     ) -> Iterator[tuple[tuple[str, ...], Binding]]:
         """Find all word combinations and bindings that satisfy patterns.
 
-        Tries all permutations of available words to find matches.
-        Returns both the word combination used and the binding.
+        Tries every assignment of distinct word slots to antecedent slots,
+        but prunes assignments where a word is shorter than its assigned
+        antecedent's minimum match length. Antecedents are explored in
+        order of descending minimum length, so the most constrained
+        slots fail fast and prune the search tree early.
 
         Args:
             patterns: Sequence of patterns to match
             available_words: Pool of words to draw from
 
         Yields:
-            Tuples of (words_used, binding) for each valid match
+            Tuples of (words_used, binding) for each valid match. The
+            ``words_used`` tuple is in the original antecedent order.
         """
         n = len(patterns)
-        if n > len(available_words):
+        if n == 0 or n > len(available_words):
             return
 
-        for word_combo in permutations(available_words, n):
-            for binding in self.unify(patterns, word_combo):
-                yield (word_combo, binding)
+        words = tuple(available_words)
+        # Pre-compute length floors so we don't pay them per node.
+        pattern_min = tuple(p.min_match_length() for p in patterns)
+        word_lengths = tuple(len(w) for w in words)
+
+        # Per-antecedent candidate index lists, restricted to words long
+        # enough to potentially match. If any antecedent has zero candidates
+        # the whole search is empty.
+        candidates: list[list[int]] = []
+        for required in pattern_min:
+            slot_candidates = [i for i, length in enumerate(word_lengths) if length >= required]
+            if not slot_candidates:
+                return
+            candidates.append(slot_candidates)
+
+        # Walk antecedents in descending order of min length so the
+        # most-constrained slot prunes the search tree first.
+        order = sorted(range(n), key=lambda i: pattern_min[i], reverse=True)
+
+        used: set[int] = set()
+        chosen: list[int] = [-1] * n  # index per antecedent
+
+        def walk(depth: int) -> Iterator[tuple[tuple[str, ...], Binding]]:
+            if depth == n:
+                ordered = tuple(words[chosen[i]] for i in range(n))
+                ordered_patterns = tuple(patterns[i] for i in range(n))
+                for binding in self.unify(ordered_patterns, ordered):
+                    yield (ordered, binding)
+                return
+
+            slot = order[depth]
+            for word_idx in candidates[slot]:
+                if word_idx in used:
+                    continue
+                used.add(word_idx)
+                chosen[slot] = word_idx
+                yield from walk(depth + 1)
+                used.remove(word_idx)
+                chosen[slot] = -1
+
+        yield from walk(0)
