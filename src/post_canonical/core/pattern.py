@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .errors import PatternError, format_set
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -124,7 +125,9 @@ class Pattern:
     def parse(cls, text: str, variables: dict[str, Variable]) -> "Pattern":
         """Parse a pattern string like 'M${x}${y}I' into a Pattern object.
 
-        Variables are denoted by ${name} syntax for unambiguous parsing.
+        Variables are denoted by ``${name}`` syntax for unambiguous parsing.
+        Raises :class:`PatternError` with positional context on malformed
+        input or references to undeclared variables.
         """
         elements: list[PatternElement] = []
         i = 0
@@ -133,18 +136,38 @@ class Pattern:
             if text[i] == "$":
                 # Expect ${name} format
                 if i + 1 >= len(text) or text[i + 1] != "{":
-                    raise ValueError(f"Expected '{{' after '$' at position {i}")
+                    raise PatternError(
+                        f"Expected '{{' after '$' at position {i} in pattern",
+                        context={"pattern": text, "position": str(i)},
+                        hint="Use '${name}' to reference a variable.",
+                    )
                 # Find closing brace
                 j = i + 2
                 while j < len(text) and text[j] != "}":
                     j += 1
                 if j >= len(text):
-                    raise ValueError(f"Unclosed variable at position {i}")
+                    raise PatternError(
+                        f"Unclosed variable starting at position {i}",
+                        context={"pattern": text, "position": str(i)},
+                        hint="Add a matching '}' to close the variable reference.",
+                    )
                 var_name = text[i + 2 : j]
                 if not var_name:
-                    raise ValueError(f"Empty variable name at position {i}")
+                    raise PatternError(
+                        f"Empty variable name at position {i}",
+                        context={"pattern": text, "position": str(i)},
+                        hint="Variable names must be alphanumeric (with underscores).",
+                    )
                 if var_name not in variables:
-                    raise ValueError(f"Unknown variable: ${{{var_name}}}")
+                    raise PatternError(
+                        f"Unknown variable '${{{var_name}}}' in pattern",
+                        context={
+                            "pattern": text,
+                            "variable": var_name,
+                            "declared": format_set(variables),
+                        },
+                        hint="Declare the variable with .var() (or check spelling).",
+                    )
                 elements.append(variables[var_name])
                 i = j + 1  # Skip past closing brace
             else:

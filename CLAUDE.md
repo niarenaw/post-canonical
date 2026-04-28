@@ -54,6 +54,7 @@ uv run python example.py    # run the demo script
 | BFS by default for generation | Shortest-proof-first; lazy via generators so infinite systems remain tractable. |
 | Variable syntax in patterns is `${name}` | `Pattern.parse` requires the braced form. The `SystemBuilder` DSL also accepts bare `$name` as a convenience. |
 | Tests live in `tests/`, fixtures in `tests/conftest.py` | Reuse existing fixtures (`mu_system`, `binary_alphabet`, `simple_vars`, etc.) before rolling new ones. |
+| Public methods take `Sequence[T]` (or `Iterable[T]` for single-pass) on input; storage is `tuple[T, ...]` for immutable, `list[T]` for mutable scratch | Lets callers pass any list / tuple / generator without coercion. Internal types stay precise. |
 
 ### Lint config (`pyproject.toml`)
 

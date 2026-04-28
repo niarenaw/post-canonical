@@ -81,7 +81,8 @@ class PCSRepl(cmd.Cmd):
             return None
 
         try:
-            builder = SystemBuilder(self._alphabet)  # type: ignore[arg-type]
+            assert self._alphabet is not None, "alphabet must be set before building"
+            builder = SystemBuilder(self._alphabet)
             for name, kind in self._variables.items():
                 builder.var(name, kind.name.lower())
             for axiom in self._axioms:

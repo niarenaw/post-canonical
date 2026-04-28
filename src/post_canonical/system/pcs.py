@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from ..core.alphabet import Alphabet
+from ..core.errors import ValidationError, format_set
 from ..core.rule import ProductionRule
 from ..core.variable import Variable
 from .derivation import DerivedWord
@@ -45,24 +46,55 @@ class PostCanonicalSystem:
         """Ensure word uses only alphabet symbols."""
         invalid = self.alphabet.validate_word(word)
         if invalid:
-            raise ValueError(f"Word '{word}' contains invalid characters: {invalid}")
+            raise ValidationError(
+                "Word contains characters not in the alphabet",
+                context={
+                    "word": word,
+                    "invalid_characters": format_set(set(invalid)),
+                    "alphabet": str(self.alphabet),
+                },
+            )
 
     def _validate_rule(self, rule: ProductionRule) -> None:
         """Validate rule patterns against alphabet and variables."""
         # Check all variables in rule are declared
         for var in rule.all_variables:
             if var not in self.variables:
-                raise ValueError(f"Undeclared variable in rule: {var}")
+                raise ValidationError(
+                    "Rule references an undeclared variable",
+                    context={
+                        "rule": rule.display_name,
+                        "variable": var.name,
+                        "declared": format_set(v.name for v in self.variables),
+                    },
+                    hint="Add the variable via SystemBuilder.var() or check spelling.",
+                )
 
         # Validate constant parts of patterns
         for ante in rule.antecedents:
             errors = ante.validate_against_alphabet(self.alphabet)
             if errors:
-                raise ValueError(f"Invalid antecedent in rule '{rule.name}': {errors}")
+                raise ValidationError(
+                    "Antecedent uses characters not in the alphabet",
+                    context={
+                        "rule": rule.display_name,
+                        "antecedent": str(ante),
+                        "issues": "; ".join(errors),
+                        "alphabet": str(self.alphabet),
+                    },
+                )
 
         errors = rule.consequent.validate_against_alphabet(self.alphabet)
         if errors:
-            raise ValueError(f"Invalid consequent in rule '{rule.name}': {errors}")
+            raise ValidationError(
+                "Consequent uses characters not in the alphabet",
+                context={
+                    "rule": rule.display_name,
+                    "consequent": str(rule.consequent),
+                    "issues": "; ".join(errors),
+                    "alphabet": str(self.alphabet),
+                },
+            )
 
     # === Generation ===
 

@@ -222,7 +222,7 @@ class TestCodecDecode:
         """
 
         codec = PCSJsonCodec()
-        with pytest.raises(ValueError, match="Unsupported version"):
+        with pytest.raises(ValueError, match="Unsupported JSON schema version"):
             codec.decode(json_str)
 
     def test_decode_missing_field_raises(self) -> None:

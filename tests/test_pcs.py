@@ -70,7 +70,7 @@ class TestPCSValidation:
         x = Variable.any("x")
         rule = ProductionRule([Pattern([x])], Pattern([x]))
 
-        with pytest.raises(ValueError, match="invalid characters"):
+        with pytest.raises(ValueError, match="characters not in the alphabet"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"01X"}),  # X not in alphabet
@@ -84,7 +84,7 @@ class TestPCSValidation:
         y = Variable.any("y")  # Not declared in system
         rule = ProductionRule([Pattern([x, y])], Pattern([x]))
 
-        with pytest.raises(ValueError, match="Undeclared variable"):
+        with pytest.raises(ValueError, match="undeclared variable"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"01"}),
@@ -100,7 +100,7 @@ class TestPCSValidation:
             Pattern([x, "X"]),  # X not in alphabet
         )
 
-        with pytest.raises(ValueError, match="Invalid"):
+        with pytest.raises(ValueError, match="characters not in the alphabet"):
             PostCanonicalSystem(
                 alphabet=BINARY,
                 axioms=frozenset({"0"}),
