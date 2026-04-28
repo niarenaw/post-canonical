@@ -1,16 +1,16 @@
 """Explicit variable system for Post Canonical Systems."""
 
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import StrEnum
 from typing import Self
 
 
-class VariableKind(Enum):
+class VariableKind(StrEnum):
     """Defines what a variable can match."""
 
-    ANY = auto()  # Matches any string (including empty)
-    NON_EMPTY = auto()  # Matches at least one symbol
-    SINGLE = auto()  # Matches exactly one symbol
+    ANY = "any"  # Matches any string (including empty)
+    NON_EMPTY = "non_empty"  # Matches at least one symbol
+    SINGLE = "single"  # Matches exactly one symbol
 
     @classmethod
     def from_str(cls, name: str) -> "VariableKind":

@@ -2,7 +2,7 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import StrEnum
 
 from ..core.alphabet import Alphabet
 from ..core.rule import ProductionRule
@@ -12,14 +12,14 @@ from ..matching.unifier import MultiPatternUnifier
 from .derivation import Derivation, DerivationStep, DerivedWord
 
 
-class ExecutionMode(Enum):
+class ExecutionMode(StrEnum):
     """How to handle multiple possible rule applications."""
 
-    DETERMINISTIC = auto()  # First match only (by priority, then order)
-    NON_DETERMINISTIC = auto()  # All matches (for exploration)
+    DETERMINISTIC = "deterministic"  # First match only (by priority, then order)
+    NON_DETERMINISTIC = "non_deterministic"  # All matches (for exploration)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ExecutionConfig:
     """Configuration for rule execution."""
 

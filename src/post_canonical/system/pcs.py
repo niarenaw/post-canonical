@@ -10,7 +10,7 @@ from .derivation import DerivedWord
 from .executor import ExecutionConfig, ExecutionMode, RuleExecutor
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PostCanonicalSystem:
     """A Post Canonical System with full derivation tracking.
 
