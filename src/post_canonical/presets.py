@@ -1,16 +1,48 @@
-"""Example Post Canonical Systems."""
+"""Common predefined alphabets and example Post Canonical Systems.
 
-from ..core.pattern import Pattern
-from ..core.rule import ProductionRule
-from ..core.variable import Variable
-from ..system.pcs import PostCanonicalSystem
-from .alphabets import BINARY, MIU
+This module bundles two related families of presets that used to live in
+separate submodules:
+
+- Alphabet constants (``BINARY``, ``DECIMAL``, ``MIU``, ...) for the most
+  common symbol sets.
+- Builder functions (``create_mu_puzzle``, ``create_binary_doubler``,
+  ``create_palindrome_generator``) that construct ready-to-run systems.
+"""
+
+from .core.alphabet import Alphabet
+from .core.pattern import Pattern
+from .core.rule import ProductionRule
+from .core.variable import Variable
+from .system.pcs import PostCanonicalSystem
+
+# === Alphabets ===
+
+# Binary digits
+BINARY = Alphabet("01")
+
+# Decimal digits
+DECIMAL = Alphabet("0123456789")
+
+# Hexadecimal digits
+HEXADECIMAL = Alphabet("0123456789ABCDEF")
+
+# English letters
+ENGLISH_LOWERCASE = Alphabet("abcdefghijklmnopqrstuvwxyz")
+ENGLISH_UPPERCASE = Alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+ENGLISH_LETTERS = Alphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+# MIU puzzle alphabet
+MIU = Alphabet("MIU")
+
+
+# === Example systems ===
 
 
 def create_mu_puzzle() -> PostCanonicalSystem:
     """Create the famous MU puzzle from Gödel, Escher, Bach.
 
     The MU puzzle is a formal system with these rules:
+
     1. xI -> xIU       (add U after I at the end)
     2. Mx -> Mxx       (double the string after M)
     3. xIIIy -> xUy    (replace III with U)
@@ -18,13 +50,11 @@ def create_mu_puzzle() -> PostCanonicalSystem:
 
     Starting from "MI", the puzzle asks: can you derive "MU"?
 
-    Spoiler: No! The number of I's is never divisible by 3.
+    Spoiler: No - the number of I's is never divisible by 3.
     """
-    # Declare variables
     x = Variable.any("x")
     y = Variable.any("y")
 
-    # Create rules
     rules = frozenset(
         {
             ProductionRule(
@@ -92,10 +122,11 @@ def create_palindrome_generator() -> PostCanonicalSystem:
     """Create a system that generates binary palindromes.
 
     Rules:
+
     - x -> 0x0    (wrap with 0s)
     - x -> 1x1    (wrap with 1s)
 
-    Starting from "", generates all binary palindromes.
+    Starting from "", "0", and "1", generates all binary palindromes.
     """
     x = Variable.any("x")
 
@@ -116,10 +147,23 @@ def create_palindrome_generator() -> PostCanonicalSystem:
         }
     )
 
-    # Start with empty string and single characters
     return PostCanonicalSystem(
         alphabet=BINARY,
         axioms=frozenset({"", "0", "1"}),
         rules=rules,
         variables=frozenset({x}),
     )
+
+
+__all__ = [
+    "BINARY",
+    "DECIMAL",
+    "ENGLISH_LETTERS",
+    "ENGLISH_LOWERCASE",
+    "ENGLISH_UPPERCASE",
+    "HEXADECIMAL",
+    "MIU",
+    "create_binary_doubler",
+    "create_mu_puzzle",
+    "create_palindrome_generator",
+]

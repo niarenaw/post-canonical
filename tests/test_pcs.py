@@ -10,7 +10,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 
 
 class TestPCSCreation:

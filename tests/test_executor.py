@@ -8,7 +8,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 from post_canonical.system.derivation import DerivedWord
 from post_canonical.system.executor import RuleExecutor
 

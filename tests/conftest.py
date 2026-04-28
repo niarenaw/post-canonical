@@ -11,8 +11,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets import create_binary_doubler, create_mu_puzzle, create_palindrome_generator
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU, create_binary_doubler, create_mu_puzzle, create_palindrome_generator
 
 
 @pytest.fixture

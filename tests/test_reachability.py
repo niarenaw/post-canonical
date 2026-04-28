@@ -8,7 +8,7 @@ from post_canonical import (
     ProductionRule,
     Variable,
 )
-from post_canonical.presets.alphabets import BINARY
+from post_canonical.presets import BINARY
 from post_canonical.query import QueryResult, ReachabilityQuery, ReachabilityResult
 
 

@@ -45,7 +45,7 @@ from .core.rule import ProductionRule
 from .core.variable import Variable, VariableKind
 
 # Presets
-from .presets.alphabets import (
+from .presets import (
     BINARY,
     DECIMAL,
     ENGLISH_LETTERS,
@@ -53,8 +53,6 @@ from .presets.alphabets import (
     ENGLISH_UPPERCASE,
     HEXADECIMAL,
     MIU,
-)
-from .presets.examples import (
     create_binary_doubler,
     create_mu_puzzle,
     create_palindrome_generator,

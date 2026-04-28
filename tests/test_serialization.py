@@ -15,7 +15,7 @@ from post_canonical import (
     Variable,
     VariableKind,
 )
-from post_canonical.presets.alphabets import BINARY, MIU
+from post_canonical.presets import BINARY, MIU
 
 
 class TestCodecEncode:
