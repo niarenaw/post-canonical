@@ -50,10 +50,13 @@ system = (SystemBuilder("MIU")
     .rule("$x UU $y -> $x$y", name="delete_UU")
     .build())
 
-# Generate all derivable words up to 3 steps
+# Generate all derivable words up to 3 steps. The default `max_steps=10`
+# prevents accidental runaway on systems whose word set explodes; raise
+# it (or use `iterate()`) for deeper exploration.
 words = system.generate_words(max_steps=3)
 print(sorted(words, key=lambda w: (len(w), w)))
-# ['MI', 'MII', 'MIU', 'MIII', 'MIIU', 'MIIII', 'MIIIU', 'MIUIU']
+# ['MI', 'MII', 'MIU', 'MUI', 'MIIU', 'MIIII', 'MIUIU', 'MIIIIU',
+#  'MIIUIIU', 'MIIIIIIII', 'MIUIUIUIU']
 
 # Check if a word is reachable
 from post_canonical.query import ReachabilityQuery
@@ -73,13 +76,28 @@ builder = (SystemBuilder("abc")
 )
 ```
 
+## Pattern syntax
+
+The pattern grammar is intentionally tiny:
+
+```
+pattern    ::= element+
+element    ::= constant | variable
+constant   ::= [^$]+
+variable   ::= "${" name "}"          (canonical)
+             | "$" name                (shorthand)
+name       ::= [A-Za-z_][A-Za-z0-9_]*
+```
+
+`Pattern.parse` accepts only the canonical `${name}` form to avoid ambiguity when a variable name could be confused with the trailing constant. The `SystemBuilder` DSL accepts both `$x` and `${x}` and normalizes them.
+
 ## CLI
 
 The package includes an interactive REPL for exploring systems without writing code:
 
 ```
 $ pcs
-Post Canonical Systems REPL v2.0.0
+Post Canonical Systems REPL vX.Y.Z          # the live REPL prints the current __version__
 Type 'help' for commands.
 
 pcs> alphabet MIU

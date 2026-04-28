@@ -77,7 +77,10 @@ class PostCanonicalSystem:
         Uses breadth-first exploration.
 
         Args:
-            max_steps: Maximum number of derivation rounds
+            max_steps: Maximum number of derivation rounds. Defaults to 10
+                so that systems with explosive growth (or accidental infinite
+                loops) terminate quickly. Raise it for deeper exploration,
+                or use ``iterate()`` for unbounded lazy traversal.
             mode: Execution mode (DETERMINISTIC or NON_DETERMINISTIC)
 
         Returns:

@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-04
+
+### Changed
+
+- Performance pass on the matcher and rule executor: precomputed suffix-min
+  pruning during backtracking, reduced allocations on repeated rule
+  application, and trimmed duplicate work in BFS expansion.
+
+### Fixed
+
+- Several small correctness bugs in pattern matching and serialization paths
+  surfaced by extended test coverage.
+
+### Documentation
+
+- Trimmed and tightened README. (See PR #3.)
+
+## [2.1.0] - 2026-03-04
+
+### Added
+
+- Interactive REPL (`pcs` command) for exploring systems without writing Python.
+- `SystemBuilder` fluent DSL for ergonomic construction with `$name` /
+  `${name}` variable syntax.
+- Visualization exporters: GraphViz DOT, LaTeX, Mermaid, and ASCII tree.
+- Expanded test suite covering builder, REPL, and visualization paths.
+- Documentation pass: README quick-start, examples, and architecture diagrams.
+
+### Fixed
+
+- Lint errors after the v2.0 rewrite (import sorting, unused imports,
+  per-file `PLR2004` allowances for tests and `example.py`).
+
+(See PR #2.)
+
 ## [2.0.0] - 2025-01-24
 
 Complete rewrite of the Post Canonical Systems library with a modern, ergonomic API.
@@ -24,7 +59,9 @@ Complete rewrite of the Post Canonical Systems library with a modern, ergonomic 
   and `DerivedWord` types to trace how words are generated.
 - **Reachability queries**: `ReachabilityQuery` class to check if target words are
   derivable from axioms, with configurable search limits.
-- **Execution modes**: `ExecutionConfig` with `BFS` and `DFS` execution strategies.
+- **Execution modes**: `ExecutionConfig.mode` controls per-rule match behavior:
+  `DETERMINISTIC` (yield first match) or `NON_DETERMINISTIC` (yield all matches).
+  Word generation is breadth-first by derivation depth.
 - **Preset alphabets**: Built-in alphabets for common use cases (`BINARY`, `DECIMAL`,
   `HEXADECIMAL`, `ENGLISH_LOWERCASE`, `ENGLISH_UPPERCASE`, `ENGLISH_LETTERS`, `MIU`).
 - **Example systems**: Ready-to-use systems including `create_mu_puzzle()`,

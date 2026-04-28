@@ -18,7 +18,7 @@ src/post_canonical/
   visualization.py      DOT, LaTeX, Mermaid, ASCII-tree exporters
   core/                 Frozen dataclasses: Alphabet, Variable, Pattern, ProductionRule, errors
   matching/             Backtracking matcher, Binding, multi-antecedent unifier
-  system/               PostCanonicalSystem, executor (BFS/DFS, det/non-det), Derivation traces
+  system/               PostCanonicalSystem, executor (BFS, deterministic/non-deterministic), Derivation traces
   query/                ReachabilityQuery (BFS-based derivability checks)
   presets/              Built-in alphabets (BINARY, MIU, ...) and example systems (mu_puzzle, ...)
   serialization/        PCSJsonCodec for save/load
