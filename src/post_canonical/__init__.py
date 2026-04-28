@@ -72,7 +72,7 @@ from .system.pcs import PostCanonicalSystem
 # Visualization exporters
 from .visualization import to_ascii_tree, to_dot, to_latex, to_mermaid
 
-__version__ = "2.2.0"
+__version__ = "3.0.0"
 
 __all__ = [
     # Preset alphabets

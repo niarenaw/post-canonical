@@ -49,9 +49,7 @@ class PatternMatcher:
         elements = pattern.elements
         suffix_min = self._compute_suffix_min_lengths(elements)
 
-        scratch: dict[str, str] = (
-            dict(initial_binding) if initial_binding is not None else {}
-        )
+        scratch: dict[str, str] = dict(initial_binding) if initial_binding is not None else {}
 
         yield from self._match_elements(
             elements=elements,
@@ -140,18 +138,14 @@ class PatternMatcher:
 
         if isinstance(elem, str):
             if word.startswith(elem, pos):
-                yield from self._match_elements(
-                    elements, suffix_min, next_idx, word, pos + len(elem), scratch
-                )
+                yield from self._match_elements(elements, suffix_min, next_idx, word, pos + len(elem), scratch)
             return
 
         if isinstance(elem, Variable):
             bound = scratch.get(elem.name)
             if bound is not None:
                 if word.startswith(bound, pos):
-                    yield from self._match_elements(
-                        elements, suffix_min, next_idx, word, pos + len(bound), scratch
-                    )
+                    yield from self._match_elements(elements, suffix_min, next_idx, word, pos + len(bound), scratch)
                 return
 
             min_len = elem.min_length()
@@ -165,8 +159,6 @@ class PatternMatcher:
             name = elem.name
             for length in range(min_len, max_len + 1):
                 scratch[name] = word[pos : pos + length]
-                yield from self._match_elements(
-                    elements, suffix_min, next_idx, word, pos + length, scratch
-                )
+                yield from self._match_elements(elements, suffix_min, next_idx, word, pos + length, scratch)
             # Pop the variable on the way out so siblings see a clean scratch.
             scratch.pop(name, None)

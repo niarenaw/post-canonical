@@ -54,9 +54,7 @@ class TestConfiguration:
         assert repl._axioms == {"MI", "MII"}
 
     def test_rule_command_records_rule_string(self) -> None:
-        repl, _ = _drive(
-            'alphabet MIU\nvar x\nrule "$xI -> $xIU"\nexit'
-        )
+        repl, _ = _drive('alphabet MIU\nvar x\nrule "$xI -> $xIU"\nexit')
         assert any("$xI -> $xIU" in r for r in repl._rules)
 
 

@@ -69,9 +69,7 @@ class TestMatcherRoundTrip:
 
     @given(p_and_pool=patterns(), w=words(max_size=8))
     @settings(max_examples=200, deadline=None, suppress_health_check=[HealthCheck.too_slow])
-    def test_match_then_substitute_recovers_word(
-        self, p_and_pool: tuple[Pattern, dict[str, Variable]], w: str
-    ) -> None:
+    def test_match_then_substitute_recovers_word(self, p_and_pool: tuple[Pattern, dict[str, Variable]], w: str) -> None:
         pattern, _ = p_and_pool
         matcher = PatternMatcher(Alphabet(ALPHA))
         for binding in matcher.match(pattern, w):
@@ -83,9 +81,7 @@ class TestPatternParseRoundTrip:
 
     @given(p_and_pool=patterns())
     @settings(max_examples=200, deadline=None, suppress_health_check=[HealthCheck.too_slow])
-    def test_str_then_parse_is_identity(
-        self, p_and_pool: tuple[Pattern, dict[str, Variable]]
-    ) -> None:
+    def test_str_then_parse_is_identity(self, p_and_pool: tuple[Pattern, dict[str, Variable]]) -> None:
         pattern, pool = p_and_pool
         rendered = str(pattern)
         # str(Pattern) emits the canonical ${name} form, which Pattern.parse

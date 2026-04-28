@@ -57,33 +57,17 @@ class TestRules:
             b.rule("${x} -> ${x}")
 
     def test_canonical_brace_syntax_parses(self) -> None:
-        b = (
-            SystemBuilder("ab")
-            .var("x")
-            .axiom("a")
-            .rule("${x} -> ${x}${x}", name="double")
-        )
+        b = SystemBuilder("ab").var("x").axiom("a").rule("${x} -> ${x}${x}", name="double")
         assert len(b._rules) == 1
 
     def test_short_syntax_parses(self) -> None:
-        b = (
-            SystemBuilder("ab")
-            .var("x")
-            .axiom("a")
-            .rule("$x -> $x$x", name="double_short")
-        )
+        b = SystemBuilder("ab").var("x").axiom("a").rule("$x -> $x$x", name="double_short")
         assert len(b._rules) == 1
 
     def test_mixed_syntax_in_one_rule(self) -> None:
         # Mixing ${x} and $y in the same pattern should normalize to the same
         # variable references.
-        b = (
-            SystemBuilder("abc")
-            .var("x")
-            .var("y")
-            .axiom("abc")
-            .rule("${x} a $y -> $x b ${y}", name="mixed")
-        )
+        b = SystemBuilder("abc").var("x").var("y").axiom("abc").rule("${x} a $y -> $x b ${y}", name="mixed")
         # The rule should reference both variables.
         rule = b._rules[0]
         all_var_names = {v.name for v in rule.all_variables}
@@ -94,13 +78,7 @@ class TestRules:
         # to the longer variable rather than $x followed by literal 'y'.
         # Build a self-consistent rule (consequent vars must come from
         # antecedent vars) so we can inspect the parsed structure.
-        b = (
-            SystemBuilder("ab")
-            .var("x")
-            .var("xy")
-            .axiom("a")
-            .rule("$xy -> $xy", name="identity")
-        )
+        b = SystemBuilder("ab").var("x").var("xy").axiom("a").rule("$xy -> $xy", name="identity")
         rule = b._rules[0]
         ante_vars = {v.name for v in rule.antecedents[0].variables}
         assert ante_vars == {"xy"}
