@@ -280,9 +280,7 @@ Rule Syntax:
         self._rules.append(pattern)
         self._invalidate_system()
 
-        parts = pattern.split("->", 1)
-        display = f"{parts[0].strip()} -> {parts[1].strip()}"
-        self._print_success(f"Rule added: {display}")
+        self._print_success(f"Rule added: {_format_rule_string(pattern)}")
 
     def do_show(self, arg: str) -> None:
         """Display current system configuration.
@@ -315,9 +313,7 @@ Rule Syntax:
         if self._rules:
             print("Rules:")
             for i, rule in enumerate(self._rules, 1):
-                parts = rule.split("->", 1)
-                display = f"{parts[0].strip()} -> {parts[1].strip()}"
-                print(f"  {i}. {display}")
+                print(f"  {i}. {_format_rule_string(rule)}")
         else:
             print("Rules:     (none)")
 
@@ -535,6 +531,12 @@ Rule Syntax:
         """Handle unknown commands."""
         cmd_name = line.split()[0] if line.split() else line
         self._print_error(f"Unknown command: '{cmd_name}'. Type 'help' for available commands.")
+
+
+def _format_rule_string(pattern: str) -> str:
+    """Render a raw rule string with normalized whitespace around the arrow."""
+    antecedent, consequent = pattern.split("->", 1)
+    return f"{antecedent.strip()} -> {consequent.strip()}"
 
 
 def main() -> None:

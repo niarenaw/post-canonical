@@ -57,7 +57,6 @@ class PostCanonicalSystem:
 
     def _validate_rule(self, rule: ProductionRule) -> None:
         """Validate rule patterns against alphabet and variables."""
-        # Check all variables in rule are declared
         for var in rule.all_variables:
             if var not in self.variables:
                 raise ValidationError(
@@ -70,31 +69,35 @@ class PostCanonicalSystem:
                     hint="Add the variable via SystemBuilder.var() or check spelling.",
                 )
 
-        # Validate constant parts of patterns
         for ante in rule.antecedents:
             errors = ante.validate_against_alphabet(self.alphabet)
             if errors:
                 raise ValidationError(
                     "Antecedent uses characters not in the alphabet",
-                    context={
-                        "rule": rule.display_name,
-                        "antecedent": str(ante),
-                        "issues": "; ".join(errors),
-                        "alphabet": str(self.alphabet),
-                    },
+                    context=self._pattern_error_context(rule, "antecedent", ante, errors),
                 )
 
         errors = rule.consequent.validate_against_alphabet(self.alphabet)
         if errors:
             raise ValidationError(
                 "Consequent uses characters not in the alphabet",
-                context={
-                    "rule": rule.display_name,
-                    "consequent": str(rule.consequent),
-                    "issues": "; ".join(errors),
-                    "alphabet": str(self.alphabet),
-                },
+                context=self._pattern_error_context(rule, "consequent", rule.consequent, errors),
             )
+
+    def _pattern_error_context(
+        self,
+        rule: ProductionRule,
+        role: str,
+        pattern: object,
+        errors: list[str],
+    ) -> dict[str, str]:
+        """Build the structured error context for a pattern-vs-alphabet failure."""
+        return {
+            "rule": rule.display_name,
+            role: str(pattern),
+            "issues": "; ".join(errors),
+            "alphabet": str(self.alphabet),
+        }
 
     # === Generation ===
 

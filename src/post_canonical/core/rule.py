@@ -25,6 +25,10 @@ class ProductionRule:
     consequent: Pattern
     priority: int = 0
     name: str | None = None
+    # Always overwritten in __init__ to (-priority, name or "") for fast
+    # access in the executor's per-step rule sort. The literal default
+    # exists only to satisfy the dataclass's "fields with defaults must
+    # follow fields with defaults" rule.
     sort_key: tuple[int, str] = (0, "")
 
     def __init__(
