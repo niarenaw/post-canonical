@@ -1,7 +1,12 @@
 """Query capabilities for Post Canonical Systems."""
 
 from .reachability import QueryResult, ReachabilityQuery, ReachabilityResult
-from .termination import TerminationCertificate, TerminationChecker, TerminationStatus
+from .termination import (
+    TerminationCertificate,
+    TerminationChecker,
+    TerminationMethod,
+    TerminationStatus,
+)
 
 __all__ = [
     "QueryResult",
@@ -9,5 +14,6 @@ __all__ = [
     "ReachabilityResult",
     "TerminationCertificate",
     "TerminationChecker",
+    "TerminationMethod",
     "TerminationStatus",
 ]

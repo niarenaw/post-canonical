@@ -60,7 +60,12 @@ from .presets import (
 
 # Query
 from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
-from .query.termination import TerminationCertificate, TerminationChecker, TerminationStatus
+from .query.termination import (
+    TerminationCertificate,
+    TerminationChecker,
+    TerminationMethod,
+    TerminationStatus,
+)
 
 # Serialization
 from .serialization.json_codec import PCSJsonCodec
@@ -105,6 +110,7 @@ __all__ = [
     "SystemBuilder",
     "TerminationCertificate",
     "TerminationChecker",
+    "TerminationMethod",
     "TerminationStatus",
     "Variable",
     "VariableKind",

@@ -27,6 +27,7 @@ from ..core.rule import ProductionRule
 from ..system.pcs import PostCanonicalSystem
 from ._rule_analysis import (
     rule_length_bounds,
+    variable_min_lengths,
     variable_multiplicity,
 )
 
@@ -39,19 +40,26 @@ class TerminationStatus(StrEnum):
     UNKNOWN = "unknown"
 
 
+class TerminationMethod(StrEnum):
+    """Which technique produced a termination certificate."""
+
+    LENGTH_STRICT_DECREASE = "length_strict_decrease"
+    WEIGHT_FUNCTION = "weight_function"
+    IDENTITY_RULE = "identity_rule"
+    NO_CERTIFICATE = "no_certificate"
+
+
 @dataclass(frozen=True, slots=True)
 class TerminationCertificate:
     """Outcome of a termination check, with a witness when one exists.
 
-    ``method`` names the technique that produced the verdict
-    (``"length_strict_decrease"``, ``"weight_function"``,
-    ``"identity_rule"``, or ``"no_certificate"``); ``witness`` is the
-    concrete object the technique produced (the weight vector, the
-    looping rule's name, …).
+    ``witness`` is the concrete object the technique produced - the
+    weight vector for ``WEIGHT_FUNCTION``, the looping rule's name for
+    ``IDENTITY_RULE``, ``None`` for length and no-certificate verdicts.
     """
 
     status: TerminationStatus
-    method: str
+    method: TerminationMethod
     witness: Mapping[str, int] | str | None
     explanation: str
 
@@ -70,21 +78,15 @@ class TerminationChecker:
         self.system = system
 
     def check_length_decreasing(self) -> TerminationCertificate:
-        """Verify every rule strictly reduces the total word length.
-
-        This is the cheapest certificate: derivable in linear time from
-        rule shape, with no search.
-        """
-        offending: list[str] = []
-        for rule in self.system.rules:
-            bounds = rule_length_bounds(rule)
-            if not bounds.is_strictly_decreasing:
-                offending.append(rule.display_name)
+        """Verify every rule strictly reduces the total word length."""
+        offending = [
+            rule.display_name for rule in self.system.rules if not rule_length_bounds(rule).is_strictly_decreasing
+        ]
 
         if not offending:
             return TerminationCertificate(
                 status=TerminationStatus.TERMINATING,
-                method="length_strict_decrease",
+                method=TerminationMethod.LENGTH_STRICT_DECREASE,
                 witness=None,
                 explanation=(
                     "Every rule strictly reduces the total word length, so derivations cannot grow without bound."
@@ -93,9 +95,9 @@ class TerminationChecker:
 
         return TerminationCertificate(
             status=TerminationStatus.UNKNOWN,
-            method="no_certificate",
+            method=TerminationMethod.NO_CERTIFICATE,
             witness=None,
-            explanation=(f"Rules without a guaranteed length decrease: {', '.join(sorted(offending))}."),
+            explanation=f"Rules without a guaranteed length decrease: {', '.join(sorted(offending))}.",
         )
 
     def check_weight_function(self, max_weight: int = 5) -> TerminationCertificate:
@@ -115,7 +117,7 @@ class TerminationChecker:
             if any(m_c > m_a for m_a, m_c in variable_multiplicity(rule).values()):
                 return TerminationCertificate(
                     status=TerminationStatus.UNKNOWN,
-                    method="no_certificate",
+                    method=TerminationMethod.NO_CERTIFICATE,
                     witness=None,
                     explanation=(
                         f"Rule '{rule.display_name}' grows a variable's multiplicity, "
@@ -123,20 +125,22 @@ class TerminationChecker:
                     ),
                 )
 
+        rule_summaries = tuple(_RuleWeightSummary.from_rule(rule) for rule in self.system.rules)
         symbols = tuple(self.system.alphabet)
+
         for weight_tuple in product(range(1, max_weight + 1), repeat=len(symbols)):
             weights = dict(zip(symbols, weight_tuple, strict=True))
-            if all(_max_weight_delta(rule, weights) < 0 for rule in self.system.rules):
+            if all(summary.max_weight_delta(weights) < 0 for summary in rule_summaries):
                 return TerminationCertificate(
                     status=TerminationStatus.TERMINATING,
-                    method="weight_function",
+                    method=TerminationMethod.WEIGHT_FUNCTION,
                     witness=weights,
                     explanation=f"Every rule strictly reduces total symbol weight under {weights}.",
                 )
 
         return TerminationCertificate(
             status=TerminationStatus.UNKNOWN,
-            method="no_certificate",
+            method=TerminationMethod.NO_CERTIFICATE,
             witness=None,
             explanation=f"No weight function found with weights in [1, {max_weight}].",
         )
@@ -152,7 +156,7 @@ class TerminationChecker:
             if rule.is_single_antecedent and rule.antecedents[0].elements == rule.consequent.elements:
                 return TerminationCertificate(
                     status=TerminationStatus.NON_TERMINATING,
-                    method="identity_rule",
+                    method=TerminationMethod.IDENTITY_RULE,
                     witness=rule.display_name,
                     explanation=(
                         f"Rule '{rule.display_name}' has identical antecedent and consequent, "
@@ -162,19 +166,13 @@ class TerminationChecker:
 
         return TerminationCertificate(
             status=TerminationStatus.UNKNOWN,
-            method="no_certificate",
+            method=TerminationMethod.NO_CERTIFICATE,
             witness=None,
             explanation="No identity rules detected.",
         )
 
     def check(self, max_weight: int = 5) -> TerminationCertificate:
-        """Try certificates in cost order and return the first definitive verdict.
-
-        Order: identity-rule check (linear), length-decreasing (linear),
-        weight-function (brute search, dominant cost). The combined
-        result is the strongest verdict any check produced; if all are
-        ``UNKNOWN``, the combined explanation aggregates the misses.
-        """
+        """Try certificates in cost order and return the first definitive verdict."""
         identity = self.check_identity_rules()
         if identity.status is TerminationStatus.NON_TERMINATING:
             return identity
@@ -189,7 +187,7 @@ class TerminationChecker:
 
         return TerminationCertificate(
             status=TerminationStatus.UNKNOWN,
-            method="no_certificate",
+            method=TerminationMethod.NO_CERTIFICATE,
             witness=None,
             explanation=(
                 f"No certificate found. Length check: {length.explanation} Weight check: {weight.explanation}"
@@ -197,43 +195,50 @@ class TerminationChecker:
         )
 
 
-def _max_weight_delta(rule: ProductionRule, weights: Mapping[str, int]) -> int:
-    """Tight upper bound on ``weight(consequent) - weight(antecedents)``.
+@dataclass(frozen=True, slots=True)
+class _RuleWeightSummary:
+    """Pre-extracted shape of a rule for weight-delta computation in a tight loop.
 
-    The constant skeleton contributes a fixed delta. Each variable with
-    a negative multiplicity coefficient contributes at most
-    ``coefficient * v_min * min(weights)``: the binding has to be at
-    least ``v_min`` characters, and the smallest possible weight per
-    character is ``min(weights)``. Variables with zero coefficient
-    cancel; positive coefficients are filtered upstream.
+    Repeated brute-force over weight vectors hits this summary once per
+    iteration; the per-rule data we read - constant character lists and
+    the negative-coefficient variable terms - never changes between
+    iterations, so we materialise them once when the summary is built.
     """
-    constant_delta = 0
-    for elem in rule.consequent.elements:
-        if isinstance(elem, str):
-            constant_delta += sum(weights[c] for c in elem)
-    for ante in rule.antecedents:
-        for elem in ante.elements:
-            if isinstance(elem, str):
-                constant_delta -= sum(weights[c] for c in elem)
 
-    min_weight = min(weights.values())
+    consequent_chars: tuple[str, ...]
+    antecedent_chars: tuple[str, ...]
+    negative_var_terms: tuple[tuple[int, int], ...]
+    """Each entry is ``(coefficient, v_min)`` for a negative-coefficient variable."""
 
-    var_contribution = 0
-    for name, (m_a, m_c) in variable_multiplicity(rule).items():
-        coefficient = m_c - m_a
-        if coefficient >= 0:
-            continue
-        v_min = _min_length(rule, name)
-        # coefficient is negative, so coefficient * v_min * min_weight is
-        # the most positive (largest) value the variable can contribute.
-        var_contribution += coefficient * v_min * min_weight
+    @classmethod
+    def from_rule(cls, rule: ProductionRule) -> "_RuleWeightSummary":
+        consequent_chars = tuple(c for elem in rule.consequent.elements if isinstance(elem, str) for c in elem)
+        antecedent_chars = tuple(
+            c for ante in rule.antecedents for elem in ante.elements if isinstance(elem, str) for c in elem
+        )
+        min_lengths = variable_min_lengths(rule)
+        negative_var_terms = tuple(
+            (m_c - m_a, min_lengths.get(name, 0))
+            for name, (m_a, m_c) in variable_multiplicity(rule).items()
+            if m_c < m_a
+        )
+        return cls(
+            consequent_chars=consequent_chars,
+            antecedent_chars=antecedent_chars,
+            negative_var_terms=negative_var_terms,
+        )
 
-    return constant_delta + var_contribution
+    def max_weight_delta(self, weights: Mapping[str, int]) -> int:
+        """Tight upper bound on ``weight(consequent) - weight(antecedents)``.
 
-
-def _min_length(rule: ProductionRule, name: str) -> int:
-    """Minimum number of characters a variable's binding must contain."""
-    for var in rule.all_variables:
-        if var.name == name:
-            return var.min_length()
-    return 0
+        Constants contribute a fixed delta. Each negative-coefficient
+        variable shaves off at most ``coefficient * v_min * min(weights)``
+        because its binding must be at least ``v_min`` characters and
+        each character carries at least the smallest weight.
+        """
+        constant_delta = sum(weights[c] for c in self.consequent_chars) - sum(weights[c] for c in self.antecedent_chars)
+        if not self.negative_var_terms:
+            return constant_delta
+        min_weight = min(weights.values())
+        var_contribution = sum(coefficient * v_min * min_weight for coefficient, v_min in self.negative_var_terms)
+        return constant_delta + var_contribution

@@ -11,6 +11,7 @@ from post_canonical.presets import BINARY
 from post_canonical.query import (
     TerminationCertificate,
     TerminationChecker,
+    TerminationMethod,
     TerminationStatus,
 )
 
@@ -33,17 +34,17 @@ class TestTerminationCertificate:
     def test_carries_witness_when_present(self) -> None:
         cert = TerminationCertificate(
             status=TerminationStatus.TERMINATING,
-            method="weight_function",
+            method=TerminationMethod.WEIGHT_FUNCTION,
             witness={"a": 2, "b": 1},
             explanation="ok",
         )
         assert cert.witness == {"a": 2, "b": 1}
-        assert cert.method == "weight_function"
+        assert cert.method is TerminationMethod.WEIGHT_FUNCTION
 
     def test_unknown_with_no_witness(self) -> None:
         cert = TerminationCertificate(
             status=TerminationStatus.UNKNOWN,
-            method="no_certificate",
+            method=TerminationMethod.NO_CERTIFICATE,
             witness=None,
             explanation="nothing found",
         )
@@ -72,7 +73,7 @@ class TestLengthDecreasingCheck:
 
         cert = TerminationChecker(system).check_length_decreasing()
         assert cert.status is TerminationStatus.TERMINATING
-        assert cert.method == "length_strict_decrease"
+        assert cert.method is TerminationMethod.LENGTH_STRICT_DECREASE
 
     def test_growing_system_unknown(self, binary_doubler: PostCanonicalSystem) -> None:
         cert = TerminationChecker(binary_doubler).check_length_decreasing()
@@ -104,7 +105,7 @@ class TestWeightFunctionCheck:
 
         cert = TerminationChecker(system).check_weight_function(max_weight=4)
         assert cert.status is TerminationStatus.TERMINATING
-        assert cert.method == "weight_function"
+        assert cert.method is TerminationMethod.WEIGHT_FUNCTION
         assert isinstance(cert.witness, dict)
         # The chosen weight must give A a strictly larger weight than B.
         assert cert.witness["A"] > cert.witness["B"]
@@ -134,7 +135,7 @@ class TestIdentityRuleCheck:
 
         cert = TerminationChecker(system).check_identity_rules()
         assert cert.status is TerminationStatus.NON_TERMINATING
-        assert cert.method == "identity_rule"
+        assert cert.method is TerminationMethod.IDENTITY_RULE
         assert cert.witness == "noop"
 
     def test_no_identity_rule_unknown(self, mu_system: PostCanonicalSystem) -> None:
