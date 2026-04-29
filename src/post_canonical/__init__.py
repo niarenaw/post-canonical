@@ -60,6 +60,7 @@ from .presets import (
 
 # Query
 from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
+from .query.termination import TerminationCertificate, TerminationChecker, TerminationStatus
 
 # Serialization
 from .serialization.json_codec import PCSJsonCodec
@@ -102,6 +103,9 @@ __all__ = [
     "ReachabilityResult",
     # Builder DSL
     "SystemBuilder",
+    "TerminationCertificate",
+    "TerminationChecker",
+    "TerminationStatus",
     "Variable",
     "VariableKind",
     "create_binary_doubler",
