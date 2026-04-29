@@ -19,7 +19,6 @@ single-antecedent.
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import StrEnum
 
 from ..core.rule import ProductionRule
 from ..matching.binding import Binding
@@ -31,42 +30,25 @@ from ..system.pcs import PostCanonicalSystem
 from .reachability import QueryResult, ReachabilityResult
 
 
-class InversionMode(StrEnum):
-    """Control how aggressive backward expansion is.
-
-    ``STRICT`` (default) only inverts rules where every antecedent
-    variable also appears in the consequent, guaranteeing finite
-    predecessors. ``BOUNDED`` is reserved for a future opt-in mode
-    that enumerates bounded preimages of variable-deleting rules; it
-    falls back to ``STRICT`` semantics today.
-    """
-
-    STRICT = "strict"
-    BOUNDED = "bounded"
-
-
 @dataclass(frozen=True, slots=True)
 class BidirectionalConfig:
     """Knobs for the bidirectional reachability search."""
 
     max_words: int = 10_000
-    inversion_mode: InversionMode = InversionMode.STRICT
 
 
 @dataclass(frozen=True, slots=True)
 class _BackwardLink:
     """One link in the backward chain from a word to the target.
 
-    Applying ``rule`` to (the word this link is attached to plus the
-    other antecedent inputs in ``other_inputs``) under ``binding``
-    produces ``next_word`` - the word one step closer to the target.
-    For single-antecedent rules ``other_inputs`` is empty.
+    Applying ``rule`` to the word this link is attached to under
+    ``binding`` produces ``next_word`` - the word one step closer to
+    the target.
     """
 
     rule: ProductionRule
     binding: Binding
     next_word: str
-    other_inputs: tuple[str, ...] = ()
 
 
 class BidirectionalReachabilityQuery:
@@ -76,7 +58,14 @@ class BidirectionalReachabilityQuery:
         self.system = system
         self._matcher = PatternMatcher(system.alphabet)
         self._executor = RuleExecutor(system.alphabet, system.rules)
-        self._inverters = tuple(RuleInverter.from_rule(rule) for rule in system.rules)
+        # Backward expansion only handles single-antecedent rules with clean
+        # consequent-side variable cover; pre-filter so the hot path doesn't
+        # rescan the same predicates per popped word.
+        self._invertible = tuple(
+            inverter
+            for rule in system.rules
+            if (inverter := RuleInverter.from_rule(rule)).is_clean and rule.is_single_antecedent
+        )
 
     def is_derivable(
         self,
@@ -186,9 +175,7 @@ class BidirectionalReachabilityQuery:
 
         word = frontier.popleft()
 
-        for inverter in self._inverters:
-            if not inverter.is_clean or not inverter.rule.is_single_antecedent:
-                continue
+        for inverter in self._invertible:
             for inversion in inverter.invert(word, self._matcher):
                 words_explored += 1
                 predecessor = inversion.predecessors[0]
@@ -226,7 +213,7 @@ class BidirectionalReachabilityQuery:
         link = backward.get(word)
         while link is not None:
             yield DerivationStep(
-                inputs=(word, *link.other_inputs),
+                inputs=(word,),
                 rule=link.rule,
                 binding=link.binding,
                 output=link.next_word,

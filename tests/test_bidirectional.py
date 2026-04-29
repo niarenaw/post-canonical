@@ -13,7 +13,6 @@ from post_canonical.matching.inverter import RuleInverter
 from post_canonical.query import (
     BidirectionalConfig,
     BidirectionalReachabilityQuery,
-    InversionMode,
     QueryResult,
     ReachabilityQuery,
 )
@@ -139,7 +138,6 @@ class TestBidirectionalConfig:
     def test_defaults(self) -> None:
         config = BidirectionalConfig()
         assert config.max_words == 10_000
-        assert config.inversion_mode is InversionMode.STRICT
 
     def test_custom_max_words(self) -> None:
         config = BidirectionalConfig(max_words=42)
