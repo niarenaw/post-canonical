@@ -164,3 +164,63 @@ class TestToMermaid:
         out = to_mermaid(Derivation([step]))
         # Space-containing nodes must be wrapped in quotes
         assert '"hello world"' in out
+
+
+# === Proof-DAG dedup ===
+
+
+def _multi_antecedent_concat_derivation() -> Derivation:
+    """Derive a word via the multi-antecedent concat fixture, exercising shared inputs."""
+    x = Variable.any("x")
+    y = Variable.any("y")
+    rule = ProductionRule(
+        antecedents=[Pattern([x]), Pattern([y])],
+        consequent=Pattern([x, y]),
+        name="concat",
+    )
+    pcs = PostCanonicalSystem(
+        alphabet=BINARY,
+        axioms=frozenset({"0", "1"}),
+        rules=frozenset({rule}),
+        variables=frozenset({x, y}),
+    )
+    derived = pcs.generate(max_steps=2)
+    longest = max(derived, key=lambda dw: dw.derivation.length)
+    return longest.derivation
+
+
+def _derivation_with_duplicate_edge() -> Derivation:
+    """Build a derivation whose step list contains the same edge twice."""
+    x = Variable.any("x")
+    rule = ProductionRule([Pattern([x])], Pattern([x, "0"]), name="append_0")
+    step_a = DerivationStep(
+        inputs=("1",),
+        rule=rule,
+        binding=Binding({"x": "1"}),
+        output="10",
+    )
+    return Derivation([step_a, step_a])
+
+
+class TestProofDagDedup:
+    def test_dot_drops_duplicate_edges(self) -> None:
+        out = to_dot(_derivation_with_duplicate_edge())
+        # The same edge declaration should appear exactly once even though
+        # the derivation lists the step twice.
+        edge_line = '  "1" -> "10" [label="append_0"];'
+        assert out.count(edge_line) == 1
+
+    def test_mermaid_drops_duplicate_edges(self) -> None:
+        out = to_mermaid(_derivation_with_duplicate_edge())
+        edge_line = "  1 -->|append_0| 10"
+        assert out.count(edge_line) == 1
+
+    def test_dot_multi_antecedent_emits_one_edge_per_input(self) -> None:
+        derivation = _multi_antecedent_concat_derivation()
+        out = to_dot(derivation)
+        # Each unique (input, output, rule) triple in the derivation should
+        # appear once. We verify the count matches the unique-edge set.
+        from post_canonical.visualization._proof_dag import proof_edges
+
+        expected_edges = list(proof_edges(derivation))
+        assert out.count("->") == len(expected_edges)
