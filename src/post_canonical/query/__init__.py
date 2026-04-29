@@ -1,5 +1,11 @@
 """Query capabilities for Post Canonical Systems."""
 
+from .invariants import (
+    InvariantAnalyzer,
+    InvariantReport,
+    LinearInvariant,
+    ResidueInvariant,
+)
 from .reachability import QueryResult, ReachabilityQuery, ReachabilityResult
 from .termination import (
     TerminationCertificate,
@@ -9,9 +15,13 @@ from .termination import (
 )
 
 __all__ = [
+    "InvariantAnalyzer",
+    "InvariantReport",
+    "LinearInvariant",
     "QueryResult",
     "ReachabilityQuery",
     "ReachabilityResult",
+    "ResidueInvariant",
     "TerminationCertificate",
     "TerminationChecker",
     "TerminationMethod",

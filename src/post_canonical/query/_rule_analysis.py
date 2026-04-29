@@ -89,3 +89,99 @@ def rule_length_bounds(rule: ProductionRule) -> LengthBounds:
             min_delta = None
 
     return LengthBounds(min_delta=min_delta, max_delta=max_delta)
+
+
+def is_closed_rule(rule: ProductionRule) -> bool:
+    """True iff every variable appears the same number of times on both sides.
+
+    Closed rules have a fixed symbol-delta vector that does not depend on
+    variable bindings, the well-behaved case for invariant discovery.
+    """
+    return all(m_a == m_c for m_a, m_c in variable_multiplicity(rule).values())
+
+
+def constant_symbol_counts(pattern: Pattern) -> Counter[str]:
+    """Symbol counts contributed by the pattern's constant elements only."""
+    counter: Counter[str] = Counter()
+    for elem in pattern.elements:
+        if isinstance(elem, str):
+            counter.update(elem)
+    return counter
+
+
+def antecedent_constants(rule: ProductionRule) -> Counter[str]:
+    """Symbol counts from the constant skeleton of every antecedent combined."""
+    total: Counter[str] = Counter()
+    for ante in rule.antecedents:
+        total += constant_symbol_counts(ante)
+    return total
+
+
+def rule_constant_delta(rule: ProductionRule) -> dict[str, int] | None:
+    """Symbol delta from constants alone, or ``None`` for non-closed rules.
+
+    For closed rules the variable contributions cancel, so the returned
+    mapping equals ``count_s(consequent) - count_s(antecedent_total)``
+    over every alphabet symbol the rule touches. Only non-zero entries
+    are included.
+    """
+    if not is_closed_rule(rule):
+        return None
+    ac = antecedent_constants(rule)
+    cc = constant_symbol_counts(rule.consequent)
+    return {symbol: d for symbol in ac | cc if (d := cc[symbol] - ac[symbol]) != 0}
+
+
+@dataclass(frozen=True, slots=True)
+class AffineTransition:
+    """Per-symbol affine transition induced by a single rule.
+
+    ``alpha`` and ``beta`` describe how each alphabet symbol's count
+    changes in the consequent: ``count_s(new) = alpha[s] + beta *
+    count_s(old)``. Symbols absent from ``alpha`` are unaffected
+    (``alpha=0``); ``beta`` is uniform across symbols since the rule
+    shapes we model scale every symbol's contribution by the same
+    multiplicity ratio.
+    """
+
+    alpha: dict[str, int]
+    beta: int
+
+
+def affine_transition(rule: ProductionRule) -> AffineTransition | None:
+    """Compute the rule's per-symbol affine transition, or ``None`` if non-affine.
+
+    A rule is affine when its action on symbol counts can be written as
+    ``count_s(new) = alpha[s] + beta * count_s(old)`` with constants
+    ``alpha[s]`` and ``beta``. Closed rules satisfy this trivially with
+    ``beta = 1``; single-antecedent rules with one variable whose
+    consequent multiplicity is an integer multiple of its antecedent
+    multiplicity satisfy it with ``beta = m_C / m_A``. Multi-variable
+    non-closed rules don't reduce to a per-symbol affine form because
+    the new count depends on individual variable contents that the
+    word-level count alone can't recover.
+    """
+    if not rule.is_single_antecedent:
+        return None
+    if is_closed_rule(rule):
+        beta = 1
+    else:
+        # When the rule has multiple variables, count_s(input) cannot
+        # be split back into per-variable contributions, so no
+        # per-symbol affine form exists. Restrict the non-closed case
+        # to single-variable rules with integer multiplicity ratio.
+        multiplicities = variable_multiplicity(rule)
+        if len(multiplicities) != 1:
+            return None
+        m_a, m_c = next(iter(multiplicities.values()))
+        if m_a == 0 or m_c % m_a != 0:
+            return None
+        beta = m_c // m_a
+
+    ac = antecedent_constants(rule)
+    cc = constant_symbol_counts(rule.consequent)
+    # count_s(input)  = ac[s] + m_a * count_s(binding)
+    # count_s(output) = cc[s] + m_c * count_s(binding)
+    #                 = (cc[s] - beta * ac[s]) + beta * count_s(input)
+    alpha = {s: cc[s] - beta * ac[s] for s in ac | cc}
+    return AffineTransition(alpha=alpha, beta=beta)

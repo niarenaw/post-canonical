@@ -59,6 +59,12 @@ from .presets import (
 )
 
 # Query
+from .query.invariants import (
+    InvariantAnalyzer,
+    InvariantReport,
+    LinearInvariant,
+    ResidueInvariant,
+)
 from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
 from .query.termination import (
     TerminationCertificate,
@@ -96,6 +102,9 @@ __all__ = [
     "DerivedWord",
     "ExecutionConfig",
     "ExecutionMode",
+    "InvariantAnalyzer",
+    "InvariantReport",
+    "LinearInvariant",
     # Serialization
     "PCSJsonCodec",
     "Pattern",
@@ -106,6 +115,7 @@ __all__ = [
     "QueryResult",
     "ReachabilityQuery",
     "ReachabilityResult",
+    "ResidueInvariant",
     # Builder DSL
     "SystemBuilder",
     "TerminationCertificate",
