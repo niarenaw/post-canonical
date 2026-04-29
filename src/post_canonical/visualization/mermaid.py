@@ -1,13 +1,16 @@
 """Mermaid diagram exporter for derivation proofs."""
 
 from ..system.derivation import Derivation
+from ._proof_dag import proof_edges
 
 
 def to_mermaid(derivation: Derivation) -> str:
     """Export derivation as Mermaid diagram format.
 
     Produces a top-down graph suitable for rendering in Markdown
-    documentation or Mermaid-compatible viewers.
+    documentation or Mermaid-compatible viewers. Repeated edges
+    (same endpoints and rule) are deduplicated so the output is a
+    proper DAG rather than a multigraph.
 
     Args:
         derivation: The derivation to export.
@@ -24,16 +27,11 @@ def to_mermaid(derivation: Derivation) -> str:
         return "graph TD\n  axiom"
 
     lines = ["graph TD"]
-
-    for step in derivation.steps:
-        rule_name = step.rule.display_name
-        # For multi-input rules, create edges from each input
-        for input_word in step.inputs:
-            escaped_input = _escape_mermaid_node(input_word)
-            escaped_output = _escape_mermaid_node(step.output)
-            escaped_rule = _escape_mermaid_label(rule_name)
-            lines.append(f"  {escaped_input} -->|{escaped_rule}| {escaped_output}")
-
+    for edge in proof_edges(derivation):
+        escaped_input = _escape_mermaid_node(edge.input_word)
+        escaped_output = _escape_mermaid_node(edge.output_word)
+        escaped_rule = _escape_mermaid_label(edge.rule_name)
+        lines.append(f"  {escaped_input} -->|{escaped_rule}| {escaped_output}")
     return "\n".join(lines)
 
 
