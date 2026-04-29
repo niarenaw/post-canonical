@@ -1,5 +1,7 @@
 """Tests for the InvariantAnalyzer."""
 
+import pytest
+
 from post_canonical import (
     Alphabet,
     Pattern,
@@ -13,6 +15,24 @@ from post_canonical.query import (
     LinearInvariant,
     ResidueInvariant,
 )
+
+
+@pytest.fixture
+def non_affine_system() -> PostCanonicalSystem:
+    """A multi-variable rule that doesn't reduce to a per-symbol affine form."""
+    x = Variable.any("x")
+    y = Variable.any("y")
+    rule = ProductionRule(
+        antecedents=[Pattern([x, y])],
+        consequent=Pattern([x, x, y]),
+        name="weird",
+    )
+    return PostCanonicalSystem(
+        alphabet=Alphabet("ab"),
+        axioms=frozenset({"a"}),
+        rules=frozenset({rule}),
+        variables=frozenset({x, y}),
+    )
 
 
 class TestLinearInvariant:
@@ -128,46 +148,15 @@ class TestMUPuzzleInvariant:
 class TestExcludedRules:
     """Multi-variable rules with mixed multiplicities cannot be soundly analyzed."""
 
-    def test_non_affine_rule_excluded(self) -> None:
-        # Rule "xy -> xxy" has two variables with different multiplicity ratios.
-        x = Variable.any("x")
-        y = Variable.any("y")
-        rule = ProductionRule(
-            antecedents=[Pattern([x, y])],
-            consequent=Pattern([x, x, y]),
-            name="weird",
-        )
-        system = PostCanonicalSystem(
-            alphabet=Alphabet("ab"),
-            axioms=frozenset({"a"}),
-            rules=frozenset({rule}),
-            variables=frozenset({x, y}),
-        )
-
-        analyzer = InvariantAnalyzer(system)
-        report = analyzer.discover()
+    def test_non_affine_rule_excluded(self, non_affine_system: PostCanonicalSystem) -> None:
+        report = InvariantAnalyzer(non_affine_system).discover()
         assert "weird" in report.excluded_rules
         assert not report.is_complete
         assert report.residue == ()
 
-    def test_prove_unreachable_returns_none_for_incomplete_report(self) -> None:
-        x = Variable.any("x")
-        y = Variable.any("y")
-        rule = ProductionRule(
-            antecedents=[Pattern([x, y])],
-            consequent=Pattern([x, x, y]),
-            name="weird",
-        )
-        system = PostCanonicalSystem(
-            alphabet=Alphabet("ab"),
-            axioms=frozenset({"a"}),
-            rules=frozenset({rule}),
-            variables=frozenset({x, y}),
-        )
-
-        analyzer = InvariantAnalyzer(system)
+    def test_prove_unreachable_returns_none_for_incomplete_report(self, non_affine_system: PostCanonicalSystem) -> None:
         # Even if "bbb" is unreachable in fact, an incomplete report can't prove it.
-        assert analyzer.prove_unreachable("bbb") is None
+        assert InvariantAnalyzer(non_affine_system).prove_unreachable("bbb") is None
 
 
 class TestClosedSystemLinearInvariants:

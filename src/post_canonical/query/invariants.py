@@ -27,14 +27,16 @@ from collections import Counter
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from itertools import product
+from math import gcd
 
 from ..core.rule import ProductionRule
 from ..system.pcs import PostCanonicalSystem
 from ._rule_analysis import (
     AffineTransition,
     affine_transition,
+    antecedent_constants,
+    constant_symbol_counts,
     is_closed_rule,
-    rule_constant_delta,
 )
 
 
@@ -111,10 +113,9 @@ class InvariantAnalyzer:
 
     def __init__(self, system: PostCanonicalSystem) -> None:
         self.system = system
-        self._cached_report: InvariantReport | None = None
 
     def discover(self, max_modulus: int = 6, linear_bound: int = 3) -> InvariantReport:
-        """Run linear and residue discovery and return the cached report.
+        """Run linear and residue discovery and return a fresh report.
 
         ``max_modulus`` caps the moduli tried for residue analysis;
         ``linear_bound`` bounds the absolute value of integer
@@ -122,32 +123,11 @@ class InvariantAnalyzer:
         small values that keep discovery fast on typical 2-5 symbol
         alphabets.
         """
-        if self._cached_report is None:
-            self._cached_report = self._compute_report(max_modulus=max_modulus, linear_bound=linear_bound)
-        return self._cached_report
-
-    def prove_unreachable(self, target: str) -> LinearInvariant | ResidueInvariant | None:
-        """Return an invariant that excludes ``target``, or ``None``.
-
-        The check is sound only when the report is complete (no
-        excluded rules); otherwise the invariants describe a
-        sub-system, not the full one, and ``None`` is returned to
-        avoid false positives.
-        """
-        report = self.discover()
-        if not report.is_complete:
-            return None
-
-        for inv in report.linear:
-            if not inv.admits(target):
-                return inv
-        for inv in report.residue:
-            if not inv.admits(target):
-                return inv
-        return None
-
-    def _compute_report(self, max_modulus: int, linear_bound: int) -> InvariantReport:
         rules = tuple(self.system.rules)
+        symbols = tuple(self.system.alphabet)
+        closed_flags = [is_closed_rule(rule) for rule in rules]
+        all_closed = all(closed_flags)
+
         transitions: list[AffineTransition] = []
         excluded: list[str] = []
         for rule in rules:
@@ -159,91 +139,103 @@ class InvariantAnalyzer:
         excluded_sorted = tuple(sorted(excluded))
 
         linear = (
-            self._discover_linear(rules, linear_bound, max_modulus) if all(is_closed_rule(r) for r in rules) else ()
+            self._discover_linear(rules=rules, symbols=symbols, bound=linear_bound, max_modulus=max_modulus)
+            if all_closed
+            else ()
         )
-        residue = self._discover_residue(transitions, max_modulus) if not excluded else ()
+        residue = (
+            self._discover_residue(transitions=transitions, symbols=symbols, max_modulus=max_modulus)
+            if not excluded
+            else ()
+        )
 
         notes = _build_notes(
             excluded=excluded_sorted,
             linear_count=len(linear),
             residue_count=len(residue),
-            all_closed=all(is_closed_rule(r) for r in rules),
+            all_closed=all_closed,
         )
         return InvariantReport(linear=linear, residue=residue, excluded_rules=excluded_sorted, notes=notes)
+
+    def prove_unreachable(
+        self,
+        target: str,
+        report: InvariantReport | None = None,
+    ) -> LinearInvariant | ResidueInvariant | None:
+        """Return an invariant that excludes ``target``, or ``None``.
+
+        Pass an existing ``report`` to reuse a previous discovery run;
+        otherwise a fresh ``discover()`` is invoked. The check is sound
+        only when the report is complete (no excluded rules), so this
+        method returns ``None`` for incomplete reports to avoid false
+        positives.
+        """
+        report = report or self.discover()
+        if not report.is_complete:
+            return None
+
+        for inv in report.linear:
+            if not inv.admits(target):
+                return inv
+        for inv in report.residue:
+            if not inv.admits(target):
+                return inv
+        return None
 
     def _discover_linear(
         self,
         rules: Iterable[ProductionRule],
+        symbols: tuple[str, ...],
         bound: int,
         max_modulus: int,
     ) -> tuple[LinearInvariant, ...]:
-        deltas = [rule_constant_delta(rule) or {} for rule in rules]
-        symbols = tuple(self.system.alphabet)
+        deltas = [_closed_rule_delta(rule) for rule in rules]
         axioms = tuple(self.system.axioms)
         if not axioms:
             return ()
+        axiom_counts = [tuple(Counter(axiom)[s] for s in symbols) for axiom in axioms]
 
         results: list[LinearInvariant] = []
-
         for coeffs in _enumerate_primitive_coefficients(symbols, bound):
-            if not all(_dot(coeffs, delta) == 0 for delta in deltas):
-                continue
-            values = {sum(coeffs[s] * Counter(axiom)[s] for s in symbols) for axiom in axioms}
-            if len(values) != 1:
-                continue
-            results.append(
-                LinearInvariant(
-                    coefficients=dict(coeffs),
-                    modulus=None,
-                    constant_value=next(iter(values)),
-                )
+            invariant = _try_linear_invariant(
+                coeffs=coeffs, symbols=symbols, deltas=deltas, axiom_counts=axiom_counts, modulus=None
             )
+            if invariant is not None:
+                results.append(invariant)
 
         for k in range(2, max_modulus + 1):
             for coeffs in _enumerate_residue_coefficients(symbols, k):
-                if not all(_dot(coeffs, delta) % k == 0 for delta in deltas):
+                if any(_dot(inv.coefficients, coeffs, symbols) != 0 for inv in results if inv.modulus is None):
+                    # An exact invariant already constrains this direction;
+                    # the mod-k version is redundant.
                     continue
-                values = {sum(coeffs[s] * Counter(axiom)[s] for s in symbols) % k for axiom in axioms}
-                if len(values) != 1:
-                    continue
-                if any(
-                    inv.modulus is None and _dot(inv.coefficients, coeffs) != 0
-                    for inv in results
-                    if inv.modulus is None
-                ):
-                    # The coefficient vector is already explained by an exact
-                    # invariant: skip mod-k duplicates of the same direction.
-                    continue
-                results.append(
-                    LinearInvariant(
-                        coefficients=dict(coeffs),
-                        modulus=k,
-                        constant_value=next(iter(values)),
-                    )
+                invariant = _try_linear_invariant(
+                    coeffs=coeffs, symbols=symbols, deltas=deltas, axiom_counts=axiom_counts, modulus=k
                 )
+                if invariant is not None:
+                    results.append(invariant)
         return tuple(results)
 
     def _discover_residue(
         self,
         transitions: list[AffineTransition],
+        symbols: tuple[str, ...],
         max_modulus: int,
     ) -> tuple[ResidueInvariant, ...]:
-        alphabet_order = tuple(self.system.alphabet)
         results: list[ResidueInvariant] = []
-
         for k in range(2, max_modulus + 1):
             reachable = _reachable_residues(
                 axioms=self.system.axioms,
                 transitions=transitions,
-                alphabet_order=alphabet_order,
+                alphabet_order=symbols,
                 modulus=k,
             )
-            full_size = k ** len(alphabet_order)
+            full_size = k ** len(symbols)
             if len(reachable) < full_size:
                 results.append(
                     ResidueInvariant(
                         modulus=k,
-                        alphabet_order=alphabet_order,
+                        alphabet_order=symbols,
                         reachable_residues=frozenset(reachable),
                         full_space_size=full_size,
                     )
@@ -251,8 +243,46 @@ class InvariantAnalyzer:
         return tuple(results)
 
 
-def _dot(a: dict[str, int], b: dict[str, int]) -> int:
-    return sum(a.get(s, 0) * b.get(s, 0) for s in set(a) | set(b))
+def _closed_rule_delta(rule: ProductionRule) -> dict[str, int]:
+    """Constant symbol delta of a rule already known to be closed.
+
+    Skips the redundant ``is_closed_rule`` check inside
+    :func:`rule_constant_delta` because the caller has already verified
+    closure.
+    """
+    ac = antecedent_constants(rule)
+    cc = constant_symbol_counts(rule.consequent)
+    return {symbol: d for symbol in ac | cc if (d := cc[symbol] - ac[symbol]) != 0}
+
+
+def _try_linear_invariant(
+    coeffs: dict[str, int],
+    symbols: tuple[str, ...],
+    deltas: list[dict[str, int]],
+    axiom_counts: list[tuple[int, ...]],
+    modulus: int | None,
+) -> LinearInvariant | None:
+    """Build a LinearInvariant from ``coeffs`` if it satisfies the rules + axioms.
+
+    The invariance constraint - ``c . delta == 0`` for every closed rule
+    - is checked first because it usually rejects most candidates. Then
+    the axiom-consistency check ensures every axiom yields the same
+    target value, since invariants whose value differs across axioms
+    don't apply to the system as a whole.
+    """
+    reduce = (lambda v: v % modulus) if modulus is not None else (lambda v: v)
+    if any(reduce(_dot(coeffs, delta, symbols)) != 0 for delta in deltas):
+        return None
+
+    coeff_tuple = tuple(coeffs[s] for s in symbols)
+    values = {reduce(sum(c * count for c, count in zip(coeff_tuple, counts, strict=True))) for counts in axiom_counts}
+    if len(values) != 1:
+        return None
+    return LinearInvariant(coefficients=dict(coeffs), modulus=modulus, constant_value=next(iter(values)))
+
+
+def _dot(a: dict[str, int], b: dict[str, int], symbols: tuple[str, ...]) -> int:
+    return sum(a.get(s, 0) * b.get(s, 0) for s in symbols)
 
 
 def _enumerate_primitive_coefficients(symbols: tuple[str, ...], bound: int) -> Iterator[dict[str, int]]:
@@ -292,12 +322,8 @@ def _enumerate_residue_coefficients(symbols: tuple[str, ...], modulus: int) -> I
 
 
 def _gcd_many(values: Iterable[int]) -> int:
-    from math import gcd
-
-    result = 0
-    for v in values:
-        result = gcd(result, v)
-    return result or 1
+    """Return ``gcd`` of ``values`` (treating empty input as 1)."""
+    return gcd(*values) or 1
 
 
 def _reachable_residues(
