@@ -59,6 +59,7 @@ from .presets import (
 )
 
 # Query
+from .query.critical_pairs import ConfluenceReport, CriticalPair, CriticalPairAnalyzer
 from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
 
 # Serialization
@@ -85,6 +86,9 @@ __all__ = [
     "MIU",
     # Core
     "Alphabet",
+    "ConfluenceReport",
+    "CriticalPair",
+    "CriticalPairAnalyzer",
     "Derivation",
     "DerivationStep",
     "DerivedWord",
