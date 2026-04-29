@@ -59,6 +59,11 @@ from .presets import (
 )
 
 # Query
+from .query.bidirectional import (
+    BidirectionalConfig,
+    BidirectionalReachabilityQuery,
+    InversionMode,
+)
 from .query.reachability import QueryResult, ReachabilityQuery, ReachabilityResult
 
 # Serialization
@@ -77,6 +82,8 @@ __version__ = "3.0.0"
 __all__ = [
     # Preset alphabets
     "BINARY",
+    "BidirectionalConfig",
+    "BidirectionalReachabilityQuery",
     "DECIMAL",
     "ENGLISH_LETTERS",
     "ENGLISH_LOWERCASE",
@@ -90,6 +97,7 @@ __all__ = [
     "DerivedWord",
     "ExecutionConfig",
     "ExecutionMode",
+    "InversionMode",
     # Serialization
     "PCSJsonCodec",
     "Pattern",
